@@ -626,17 +626,24 @@ const Anim = (function(){
     void main(){float L=texture2D(uPressure,vL).x,R=texture2D(uPressure,vR).x,T=texture2D(uPressure,vT).x,B=texture2D(uPressure,vB).x,div=texture2D(uDivergence,vUv).x;gl_FragColor=vec4((L+R+T+B-div)*0.25,0,0,1);}`;
   const F_GRADIENT=`precision mediump float;varying vec2 vUv,vL,vR,vT,vB;uniform sampler2D uPressure;uniform sampler2D uVelocity;
     void main(){float L=texture2D(uPressure,vL).x,R=texture2D(uPressure,vR).x,T=texture2D(uPressure,vT).x,B=texture2D(uPressure,vB).x;vec2 v=texture2D(uVelocity,vUv).xy;v-=vec2(R-L,T-B)*0.5;gl_FragColor=vec4(v,0,1);}`;
-  const F_DISPLAY=`precision highp float;varying vec2 vUv;uniform sampler2D uDye;uniform vec2 uTexel;uniform float uSmooth;
-    vec3 samp(vec2 uv){
-      if(uSmooth>0.5){
-        vec2 t=uv/uTexel-0.5; vec2 f=fract(t); vec2 b=(floor(t)+0.5)*uTexel;
-        vec3 a=texture2D(uDye,b).rgb, c1=texture2D(uDye,b+vec2(uTexel.x,0.)).rgb;
-        vec3 d=texture2D(uDye,b+vec2(0.,uTexel.y)).rgb, e=texture2D(uDye,b+uTexel).rgb;
-        return mix(mix(a,c1,f.x),mix(d,e,f.x),f.y);
-      }
-      vec2 p=(floor(uv/uTexel)+0.5)*uTexel; return texture2D(uDye,p).rgb;
+  const F_DISPLAY=`precision highp float;varying vec2 vUv;uniform sampler2D uDye;uniform vec2 uTexel;uniform vec2 uCell;uniform float uMode;
+    vec3 bilinear(vec2 uv){
+      vec2 t=uv/uTexel-0.5; vec2 f=fract(t); vec2 b=(floor(t)+0.5)*uTexel;
+      vec3 a=texture2D(uDye,b).rgb, c1=texture2D(uDye,b+vec2(uTexel.x,0.)).rgb;
+      vec3 d=texture2D(uDye,b+vec2(0.,uTexel.y)).rgb, e=texture2D(uDye,b+uTexel).rgb;
+      return mix(mix(a,c1,f.x),mix(d,e,f.x),f.y);
     }
-    void main(){vec3 c=samp(vUv);float peak=max(c.r,max(c.g,c.b));if(peak>1.0)c/=peak;gl_FragColor=vec4(c,max(c.r,max(c.g,c.b)));}`;
+    void main(){
+      if(uMode>0.5){                                  // Mosaic: coarse solid blocks, hard edges
+        vec2 p=(floor(vUv/uCell)+0.5)*uCell;
+        vec3 c=texture2D(uDye,p).rgb; float l=max(c.r,max(c.g,c.b));
+        if(l>1.0) c/=l;
+        gl_FragColor=vec4(c, step(0.06,l));           // full opacity where dye exists, else background
+        return;
+      }
+      vec3 c=bilinear(vUv); float peak=max(c.r,max(c.g,c.b)); if(peak>1.0)c/=peak;
+      gl_FragColor=vec4(c, max(c.r,max(c.g,c.b)));     // soft, wispy
+    }`;
 
   function compile(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); return s; }
   function program(vert,frag){
@@ -713,7 +720,9 @@ const Anim = (function(){
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
     gl.uniform1i(p.uniforms.uDye,dye.read.attach(0));
     gl.uniform2f(p.uniforms.uTexel,1/dyeW,1/dyeH);
-    gl.uniform1f(p.uniforms.uSmooth, SETTINGS.pixelated?0:1);
+    gl.uniform1f(p.uniforms.uMode, SETTINGS.mosaic?1:0);
+    const bp=SETTINGS.blockSize||28;
+    gl.uniform2f(p.uniforms.uCell, bp/canvas.width, bp/canvas.height);
     blit(null);
   }
 
@@ -726,12 +735,13 @@ const Anim = (function(){
       aurora:{label:'🌌 Aurora',colors:[[0.1,1,0.5],[0.5,0.1,1],[0,0.9,0.7],[0.8,0.2,1],[0.1,0.8,0.4]]},
       neon:  {label:'⚡ Neon',  colors:[[1,0,0.8],[0,1,0.2],[1,0.9,0],[0,0.8,1],[1,0.1,0.5]]},
     },
-    defaults:{ theme:'cosmic', brushSize:0.12, intensity:7000, persistence:0.55, velFade:0.20, curl:0, pixelated:false },
+    defaults:{ theme:'cosmic', brushSize:0.12, intensity:7000, persistence:0.55, velFade:0.20, curl:0, mosaic:false, blockSize:28 },
     schema:[
       {key:'brushSize',  label:'Brush size',        min:0.02, max:0.30,  step:0.01, dp:2},
       {key:'intensity',  label:'Flow force',        min:1000, max:15000, step:100,  dp:0},
       {key:'persistence',label:'Trail persistence', min:0,    max:1,     step:0.01, dp:2},
-      {key:'pixelated',  label:'Pixelated edges',   type:'toggle'},
+      {key:'mosaic',     label:'Mosaic blocks',     type:'toggle'},
+      {key:'blockSize',  label:'Block size',        min:8,    max:80,    step:1,    dp:0},
     ],
     init(cv){
       if(!gl){
