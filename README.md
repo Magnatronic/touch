@@ -19,6 +19,7 @@ Chrome — everything works with no internet connection.
 | File | Effect | Status |
 |---|---|---|
 | `fluid_sensory.html` | Liquid Navier–Stokes fluid simulation | ✅ Built |
+| `flock.html` | Abstract steering-behaviour swarm | Planned (next) |
 | `gravity_sand.html` | GPU particle sand physics | Planned |
 | `kaleidoscope.html` | Real-time mirror mandala | Planned |
 | `sound_visualiser.html` | Microphone-driven visuals | Planned |
