@@ -66,6 +66,29 @@ there. Do it in `template.html`, keep backward-compatible (fluid has only slider
 ## Remaining roadmap (after flock)
 gravity_sand · kaleidoscope · sound_visualiser · bubble_wrap · lightning · shatter.
 
+## DEFERRED idea: room lighting that mirrors on-screen colour (DMX / WLED / Philips Hue)
+Discussed, not started — revisit later. Goal: room lights match the dominant on-screen colour.
+
+Key constraint: a sandboxed browser page can't drive DMX/UDP and is blocked (mixed-content,
+self-signed cert, CORS) from reaching LAN lights directly. So:
+- **WLED** — easy; takes RGB. JSON API (throttle ~5–10/s) or UDP realtime DRGB (smooth, needs a relay).
+- **Philips Hue** — needs a local relay: CLIP v2 API is HTTPS self-signed + app key + ~10 cmds/s
+  (too slow/awkward for the browser); the smooth path is the **Entertainment API over DTLS/UDP ~50Hz**,
+  impossible from a page. Hue wants CIE **xy + brightness** (RGB→xy with per-lamp gamut clamp).
+- **DMX** — USB-serial (Enttec) via Web Serial, or Art-Net/sACN over UDP (relay).
+
+**Recommended architecture:** a small **`bridge/` Node app on the room PC** that serves the pages
+over http://localhost (avoids mixed-content/CORS) and fans one "current colour" out to WLED (UDP),
+Hue (Entertainment/DTLS + RGB→xy), and optionally DMX. Plus a tiny **optional framework hook** that
+emits a representative colour ~15Hz (average of active touch colours, fading to theme/dim when idle;
+or 1×1 canvas downsample). If no bridge is configured/reachable it silently no-ops, so pages stay
+standalone and still open from USB.
+
+One-time setup later: WLED device IPs/segments; Hue link-button app key + an Entertainment area.
+
+Honest caveat: this feature inherently needs the bridge (or Web Serial hardware) — the animations
+stay self-contained; lighting is an opt-in layer on top.
+
 ## Conventions
 - Commit messages end with the Co-Authored-By trailer used in existing commits.
 - `git push` after each logical change is fine (user has approved pushing).
