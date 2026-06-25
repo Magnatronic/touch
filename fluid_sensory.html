@@ -151,6 +151,7 @@ const STORE_KEY = 'settings:' + location.pathname.split('/').pop();
 const SHARED_DEFAULTS = {
   volume:0.30, bg:'#000000', lockedColor:null,
   voice:'pure', scale:'penta', reverb:false, echo:false, chorus:false, mute:false,
+  quality:'auto',
 };
 
 let SETTINGS = {}, currentTheme = '', colorIdx = 0;
@@ -162,6 +163,20 @@ function initSettings(){
   const themeKeys = Object.keys(Anim.themes);
   currentTheme = themeKeys.includes(SETTINGS.theme) ? SETTINGS.theme : themeKeys[0];
   bgRGB = hexToRGB(SETTINGS.bg);
+  perfLevel = (SETTINGS.quality && SETTINGS.quality!=='auto') ? SETTINGS.quality : 'high';
+}
+
+// ── Performance / quality (auto-scaling + manual override) ──────────────────────
+const QUALITY = { auto:{label:'Auto'}, high:{label:'High'}, med:{label:'Medium'}, low:{label:'Low'} };
+const PERF_ORDER = ['low','med','high'];
+let perfLevel = 'high', qCooldown = 0;
+function activeQuality(){ return perfLevel; }
+function setPerf(level){ if(level===perfLevel) return; perfLevel=level; if(Anim.setQuality) Anim.setQuality(level); }
+function autoPerf(fps){
+  if(qCooldown>0){ qCooldown--; return; }
+  const i=PERF_ORDER.indexOf(perfLevel);
+  if(fps<45 && i>0){ setPerf(PERF_ORDER[i-1]); qCooldown=2; }
+  else if(fps>58 && i<2){ setPerf(PERF_ORDER[i+1]); qCooldown=3; }
 }
 function saveSettings(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(SETTINGS)); }catch(e){} }
 
@@ -472,7 +487,8 @@ function refreshBgRow(container){
 function buildPanel(){
   const app=document.getElementById('appSliders'); app.innerHTML='';
   const h=document.createElement('div'); h.className='sectn'; h.textContent=Anim.sectionLabel||'Controls'; app.appendChild(h);
-  (Anim.schema||[]).forEach(it=>app.appendChild(makeSlider(it)));
+  (Anim.schema||[]).forEach(it=>app.appendChild(it.type==='toggle'?makeToggle(it.label,it.key):makeSlider(it)));
+  app.appendChild(makeChips('Performance','quality',QUALITY,()=>{ if(SETTINGS.quality!=='auto') setPerf(SETTINGS.quality); }));
   buildBgRow(document.getElementById('bgRow'));
   const snd=document.getElementById('soundControls'); snd.innerHTML='';
   snd.appendChild(makeChips('Voice','voice',VOICES));
@@ -515,7 +531,7 @@ panel.addEventListener('mousedown',e=>e.stopPropagation());
 panel.addEventListener('touchstart',e=>e.stopPropagation(),{passive:false});
 
 // ── Lifecycle / render loop ──────────────────────────────────────────────────────
-let glLost=false, lastTime=Date.now();
+let glLost=false, lastTime=Date.now(), fpsAccum=0, fpsFrames=0;
 function sizeCanvas(){
   const dpr=Math.min(window.devicePixelRatio||1,2);
   const w=Math.round(canvas.clientWidth*dpr), h=Math.round(canvas.clientHeight*dpr);
@@ -532,12 +548,15 @@ function loop(){
   if(glLost){ requestAnimationFrame(loop); return; }
   sizeCanvas();
   const now=Date.now(), dt=Math.min((now-lastTime)/1000,0.016); lastTime=now;
+  fpsAccum+=dt; fpsFrames++;
+  if(fpsAccum>=1){ const fps=fpsFrames/fpsAccum; fpsAccum=0; fpsFrames=0; if(SETTINGS.quality==='auto') autoPerf(fps); }
+  const cap = perfLevel==='low'?4 : perfLevel==='med'?6 : 10;
   for(const p of pointers){
     if(p.down){
       const mdx=p.x-p.px, mdy=p.y-p.py, dist=Math.hypot(mdx,mdy);
       if(!p.moved){ Anim.splat(p.x,p.y,0,0,p.color,{velScale:0}); p.moved=true; }
       else if(dist>0.00001){
-        const steps=Math.min(Math.max(1,Math.ceil(dist/0.012)),10);
+        const steps=Math.min(Math.max(1,Math.ceil(dist/0.012)),cap);
         for(let i=1;i<=steps;i++){ const t=i/steps; Anim.splat(p.px+mdx*t,p.py+mdy*t,p.dx,p.dy,p.color,{velScale:1/steps}); }
       }
       p.px=p.x; p.py=p.y; p.dx*=0.85; p.dy*=0.85;
@@ -569,7 +588,10 @@ const Anim = (function(){
   let HALF, RGBA16F, RGBA, LINEAR;
   let prog, quadBuf;
   let simW, simH, dyeW, dyeH, velocity, dye, pressure, divergence, curl2;
-  const SIM_RES=256, DYE_RES=1280;
+  const SIM_RES=256;
+  const DYE_BASE={ high:1280, med:1024, low:768 };   // dye resolution per quality level
+  let qLevel='high';
+  function dyeRes(){ return DYE_BASE[qLevel]||1280; }
   const params={ alpha:false, depth:false, stencil:false, antialias:false, preserveDrawingBuffer:false };
 
   function dyeDissipation(){ return (1.0 - SETTINGS.persistence) * 2.0; }
@@ -604,8 +626,17 @@ const Anim = (function(){
     void main(){float L=texture2D(uPressure,vL).x,R=texture2D(uPressure,vR).x,T=texture2D(uPressure,vT).x,B=texture2D(uPressure,vB).x,div=texture2D(uDivergence,vUv).x;gl_FragColor=vec4((L+R+T+B-div)*0.25,0,0,1);}`;
   const F_GRADIENT=`precision mediump float;varying vec2 vUv,vL,vR,vT,vB;uniform sampler2D uPressure;uniform sampler2D uVelocity;
     void main(){float L=texture2D(uPressure,vL).x,R=texture2D(uPressure,vR).x,T=texture2D(uPressure,vT).x,B=texture2D(uPressure,vB).x;vec2 v=texture2D(uVelocity,vUv).xy;v-=vec2(R-L,T-B)*0.5;gl_FragColor=vec4(v,0,1);}`;
-  const F_DISPLAY=`precision highp float;varying vec2 vUv;uniform sampler2D uDye;
-    void main(){vec3 c=texture2D(uDye,vUv).rgb;float peak=max(c.r,max(c.g,c.b));if(peak>1.0)c/=peak;gl_FragColor=vec4(c,max(c.r,max(c.g,c.b)));}`;
+  const F_DISPLAY=`precision highp float;varying vec2 vUv;uniform sampler2D uDye;uniform vec2 uTexel;uniform float uSmooth;
+    vec3 samp(vec2 uv){
+      if(uSmooth>0.5){
+        vec2 t=uv/uTexel-0.5; vec2 f=fract(t); vec2 b=(floor(t)+0.5)*uTexel;
+        vec3 a=texture2D(uDye,b).rgb, c1=texture2D(uDye,b+vec2(uTexel.x,0.)).rgb;
+        vec3 d=texture2D(uDye,b+vec2(0.,uTexel.y)).rgb, e=texture2D(uDye,b+uTexel).rgb;
+        return mix(mix(a,c1,f.x),mix(d,e,f.x),f.y);
+      }
+      vec2 p=(floor(uv/uTexel)+0.5)*uTexel; return texture2D(uDye,p).rgb;
+    }
+    void main(){vec3 c=samp(vUv);float peak=max(c.r,max(c.g,c.b));if(peak>1.0)c/=peak;gl_FragColor=vec4(c,max(c.r,max(c.g,c.b)));}`;
 
   function compile(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); return s; }
   function program(vert,frag){
@@ -647,7 +678,7 @@ const Anim = (function(){
     return canvas.width>=canvas.height ? {w:hi,h:lo} : {w:lo,h:hi};
   }
   function initFBOs(){
-    const s=getRes(SIM_RES), d=getRes(DYE_RES);
+    const s=getRes(SIM_RES), d=getRes(dyeRes());
     simW=s.w; simH=s.h; dyeW=d.w; dyeH=d.h;
     velocity=createDoubleFBO(simW,simH,RGBA16F,RGBA,HALF,LINEAR);
     dye=createDoubleFBO(dyeW,dyeH,RGBA16F,RGBA,HALF,LINEAR);
@@ -670,7 +701,8 @@ const Anim = (function(){
     {const p=prog.vorticity; gl.useProgram(p.prog); bindQuad(p); gl.uniform2f(p.uniforms.texelSize,1/simW,1/simH); gl.uniform1i(p.uniforms.uVelocity,velocity.read.attach(0)); gl.uniform1i(p.uniforms.uCurl,curl2.attach(1)); gl.uniform1f(p.uniforms.curl,SETTINGS.curl); gl.uniform1f(p.uniforms.dt,dt); blit(velocity.write); velocity.swap();}
     {const p=prog.divergence; gl.useProgram(p.prog); bindQuad(p); gl.uniform2f(p.uniforms.texelSize,1/simW,1/simH); gl.uniform1i(p.uniforms.uVelocity,velocity.read.attach(0)); blit(divergence);}
     {const p=prog.clear; gl.useProgram(p.prog); bindQuad(p); gl.uniform1i(p.uniforms.uTex,pressure.read.attach(0)); gl.uniform1f(p.uniforms.value,0.85); blit(pressure.write); pressure.swap();}
-    for(let i=0;i<SETTINGS.pressureIter;i++){ const p=prog.pressure; gl.useProgram(p.prog); bindQuad(p); gl.uniform2f(p.uniforms.texelSize,1/simW,1/simH); gl.uniform1i(p.uniforms.uPressure,pressure.read.attach(0)); gl.uniform1i(p.uniforms.uDivergence,divergence.attach(1)); blit(pressure.write); pressure.swap(); }
+    const iters = qLevel==='low'?10 : qLevel==='med'?16 : 22;
+    for(let i=0;i<iters;i++){ const p=prog.pressure; gl.useProgram(p.prog); bindQuad(p); gl.uniform2f(p.uniforms.texelSize,1/simW,1/simH); gl.uniform1i(p.uniforms.uPressure,pressure.read.attach(0)); gl.uniform1i(p.uniforms.uDivergence,divergence.attach(1)); blit(pressure.write); pressure.swap(); }
     {const p=prog.gradient; gl.useProgram(p.prog); bindQuad(p); gl.uniform2f(p.uniforms.texelSize,1/simW,1/simH); gl.uniform1i(p.uniforms.uPressure,pressure.read.attach(0)); gl.uniform1i(p.uniforms.uVelocity,velocity.read.attach(1)); blit(velocity.write); velocity.swap();}
     {const p=prog.advect; gl.useProgram(p.prog); bindQuad(p); gl.uniform2f(p.uniforms.texelSize,1/simW,1/simH); gl.uniform1i(p.uniforms.uVelocity,velocity.read.attach(0)); gl.uniform1i(p.uniforms.uSource,velocity.read.attach(0)); gl.uniform1f(p.uniforms.dt,dt); gl.uniform1f(p.uniforms.dissipation,SETTINGS.velFade); blit(velocity.write); velocity.swap();}
     {const p=prog.advect; gl.useProgram(p.prog); bindQuad(p); gl.uniform2f(p.uniforms.texelSize,1/dyeW,1/dyeH); gl.uniform1i(p.uniforms.uVelocity,velocity.read.attach(0)); gl.uniform1i(p.uniforms.uSource,dye.read.attach(1)); gl.uniform1f(p.uniforms.dt,dt); gl.uniform1f(p.uniforms.dissipation,dyeDissipation()); blit(dye.write); dye.swap();}
@@ -679,7 +711,10 @@ const Anim = (function(){
   function display(){
     const p=prog.display; gl.useProgram(p.prog); bindQuad(p);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
-    gl.uniform1i(p.uniforms.uDye,dye.read.attach(0)); blit(null);
+    gl.uniform1i(p.uniforms.uDye,dye.read.attach(0));
+    gl.uniform2f(p.uniforms.uTexel,1/dyeW,1/dyeH);
+    gl.uniform1f(p.uniforms.uSmooth, SETTINGS.pixelated?0:1);
+    blit(null);
   }
 
   return {
@@ -691,20 +726,23 @@ const Anim = (function(){
       aurora:{label:'🌌 Aurora',colors:[[0.1,1,0.5],[0.5,0.1,1],[0,0.9,0.7],[0.8,0.2,1],[0.1,0.8,0.4]]},
       neon:  {label:'⚡ Neon',  colors:[[1,0,0.8],[0,1,0.2],[1,0.9,0],[0,0.8,1],[1,0.1,0.5]]},
     },
-    defaults:{ theme:'cosmic', brushSize:0.12, intensity:7000, persistence:0.55, velFade:0.20, curl:0, pressureIter:22 },
+    defaults:{ theme:'cosmic', brushSize:0.12, intensity:7000, persistence:0.55, velFade:0.20, curl:0, pixelated:false },
     schema:[
       {key:'brushSize',  label:'Brush size',        min:0.02, max:0.30,  step:0.01, dp:2},
       {key:'intensity',  label:'Flow force',        min:1000, max:15000, step:100,  dp:0},
       {key:'persistence',label:'Trail persistence', min:0,    max:1,     step:0.01, dp:2},
+      {key:'pixelated',  label:'Pixelated edges',   type:'toggle'},
     ],
     init(cv){
       if(!gl){
         gl=cv.getContext('webgl2',params); isWebGL2=!!gl;
         if(!gl) gl=cv.getContext('webgl',params)||cv.getContext('experimental-webgl',params);
       }
+      qLevel=activeQuality();
       acquireExt(); setFormats(); buildPrograms(); buildQuad(); initFBOs();
     },
-    resize(w,h){ if(gl){ const d=getRes(DYE_RES); if(d.w!==dyeW||d.h!==dyeH) initFBOs(); } },
+    resize(w,h){ if(gl){ const d=getRes(dyeRes()); if(d.w!==dyeW||d.h!==dyeH) initFBOs(); } },
+    setQuality(level){ qLevel=level; if(gl) initFBOs(); },
     splat(x,y,dx,dy,color,opts){
       opts=opts||{};
       const velScale=opts.velScale!==undefined?opts.velScale:1;

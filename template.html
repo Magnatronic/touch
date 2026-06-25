@@ -151,6 +151,7 @@ const STORE_KEY = 'settings:' + location.pathname.split('/').pop();
 const SHARED_DEFAULTS = {
   volume:0.30, bg:'#000000', lockedColor:null,
   voice:'pure', scale:'penta', reverb:false, echo:false, chorus:false, mute:false,
+  quality:'auto',
 };
 
 let SETTINGS = {}, currentTheme = '', colorIdx = 0;
@@ -162,6 +163,20 @@ function initSettings(){
   const themeKeys = Object.keys(Anim.themes);
   currentTheme = themeKeys.includes(SETTINGS.theme) ? SETTINGS.theme : themeKeys[0];
   bgRGB = hexToRGB(SETTINGS.bg);
+  perfLevel = (SETTINGS.quality && SETTINGS.quality!=='auto') ? SETTINGS.quality : 'high';
+}
+
+// ── Performance / quality (auto-scaling + manual override) ──────────────────────
+const QUALITY = { auto:{label:'Auto'}, high:{label:'High'}, med:{label:'Medium'}, low:{label:'Low'} };
+const PERF_ORDER = ['low','med','high'];
+let perfLevel = 'high', qCooldown = 0;
+function activeQuality(){ return perfLevel; }
+function setPerf(level){ if(level===perfLevel) return; perfLevel=level; if(Anim.setQuality) Anim.setQuality(level); }
+function autoPerf(fps){
+  if(qCooldown>0){ qCooldown--; return; }
+  const i=PERF_ORDER.indexOf(perfLevel);
+  if(fps<45 && i>0){ setPerf(PERF_ORDER[i-1]); qCooldown=2; }
+  else if(fps>58 && i<2){ setPerf(PERF_ORDER[i+1]); qCooldown=3; }
 }
 function saveSettings(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(SETTINGS)); }catch(e){} }
 
@@ -472,7 +487,8 @@ function refreshBgRow(container){
 function buildPanel(){
   const app=document.getElementById('appSliders'); app.innerHTML='';
   const h=document.createElement('div'); h.className='sectn'; h.textContent=Anim.sectionLabel||'Controls'; app.appendChild(h);
-  (Anim.schema||[]).forEach(it=>app.appendChild(makeSlider(it)));
+  (Anim.schema||[]).forEach(it=>app.appendChild(it.type==='toggle'?makeToggle(it.label,it.key):makeSlider(it)));
+  app.appendChild(makeChips('Performance','quality',QUALITY,()=>{ if(SETTINGS.quality!=='auto') setPerf(SETTINGS.quality); }));
   buildBgRow(document.getElementById('bgRow'));
   const snd=document.getElementById('soundControls'); snd.innerHTML='';
   snd.appendChild(makeChips('Voice','voice',VOICES));
@@ -515,7 +531,7 @@ panel.addEventListener('mousedown',e=>e.stopPropagation());
 panel.addEventListener('touchstart',e=>e.stopPropagation(),{passive:false});
 
 // ── Lifecycle / render loop ──────────────────────────────────────────────────────
-let glLost=false, lastTime=Date.now();
+let glLost=false, lastTime=Date.now(), fpsAccum=0, fpsFrames=0;
 function sizeCanvas(){
   const dpr=Math.min(window.devicePixelRatio||1,2);
   const w=Math.round(canvas.clientWidth*dpr), h=Math.round(canvas.clientHeight*dpr);
@@ -532,12 +548,15 @@ function loop(){
   if(glLost){ requestAnimationFrame(loop); return; }
   sizeCanvas();
   const now=Date.now(), dt=Math.min((now-lastTime)/1000,0.016); lastTime=now;
+  fpsAccum+=dt; fpsFrames++;
+  if(fpsAccum>=1){ const fps=fpsFrames/fpsAccum; fpsAccum=0; fpsFrames=0; if(SETTINGS.quality==='auto') autoPerf(fps); }
+  const cap = perfLevel==='low'?4 : perfLevel==='med'?6 : 10;
   for(const p of pointers){
     if(p.down){
       const mdx=p.x-p.px, mdy=p.y-p.py, dist=Math.hypot(mdx,mdy);
       if(!p.moved){ Anim.splat(p.x,p.y,0,0,p.color,{velScale:0}); p.moved=true; }
       else if(dist>0.00001){
-        const steps=Math.min(Math.max(1,Math.ceil(dist/0.012)),10);
+        const steps=Math.min(Math.max(1,Math.ceil(dist/0.012)),cap);
         for(let i=1;i<=steps;i++){ const t=i/steps; Anim.splat(p.px+mdx*t,p.py+mdy*t,p.dx,p.dy,p.color,{velScale:1/steps}); }
       }
       p.px=p.x; p.py=p.y; p.dx*=0.85; p.dy*=0.85;

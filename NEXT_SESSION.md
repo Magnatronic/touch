@@ -51,16 +51,20 @@ Locked design decisions:
   Alignment · Touch pull · Trail length · Glow size · **Repel** toggle.
 - Audio: reuse the framework's per-touch tonal engine as-is.
 
-### Framework upgrade required for flock
-The Appearance schema currently renders **sliders only**. Add support for **toggle items**
-(`{type:'toggle', key, label}`) in `buildPanel`/the schema loop so flock's Repel toggle can live
-there. Do it in `template.html`, keep backward-compatible (fluid has only sliders), then sync.
+### Framework features now available (done — use them in flock)
+- **Schema toggles**: schema items support `{type:'toggle', key, label}` (renders a switch). Use this
+  for flock's **Repel** toggle. (Already used by fluid's "Pixelated edges".)
+- **Quality system**: a `Performance` chip group (Auto/High/Medium/Low) lives in every Appearance
+  pane. The framework monitors FPS and (in Auto) sets `perfLevel` = high/med/low; it also caps
+  per-finger sub-splats by level (10/6/4). An animation can read `activeQuality()` and implement
+  `Anim.setQuality(level)` to scale its own cost. **Flock should implement `setQuality` to scale
+  agent count** (e.g. high≈full count, med≈0.6×, low≈0.35×) so it auto-throttles on weak hardware.
 
 ### Rollout checklist for flock
 1. Copy `template.html` → `flock.html`, replace ANIMATION block.
-2. Implement boids + spatial hash + per-theme render styles + colour-claim + trails.
-3. Add framework toggle-schema support (template.html) + `node sync-framework.js`.
-4. `index.html`: set the Flock tile's `file:` to `flock.html` (tile already added, currently Soon).
+2. Implement boids + spatial hash + per-theme render styles + colour-claim + trails;
+   add `setQuality(level)` to scale agent count; Repel via a schema toggle.
+3. `index.html`: set the Flock tile's `file:` to `flock.html` (tile already added, currently Soon).
 5. Syntax-check, test in preview (5 touches, themes, repel, reset), commit + push.
 
 ## Remaining roadmap (after flock)
