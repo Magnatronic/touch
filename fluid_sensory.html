@@ -89,12 +89,16 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .pane{display:none}
 .pane.active{display:block}
 .themeRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+#stats{position:fixed;top:10px;left:12px;z-index:30;display:none;
+  font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:rgba(255,255,255,0.85);
+  background:rgba(0,0,0,0.45);padding:6px 9px;border-radius:8px;pointer-events:none;white-space:pre}
 /* ===== FRAMEWORK-CSS END ===== */
 </style>
 </head>
 <body>
 <!-- ===== FRAMEWORK-HTML START (synced — do not edit per file) ===== -->
 <canvas id="c"></canvas>
+<div id="stats"></div>
 
 <div id="ui">
   <button class="btn" id="collapse" title="Menu">≡</button>
@@ -151,7 +155,7 @@ const STORE_KEY = 'settings:' + location.pathname.split('/').pop();
 const SHARED_DEFAULTS = {
   volume:0.30, bg:'#000000', lockedColor:null,
   voice:'pure', scale:'penta', reverb:false, echo:false, chorus:false, mute:false,
-  quality:'auto',
+  quality:'auto', showStats:false,
 };
 
 let SETTINGS = {}, currentTheme = '', colorIdx = 0;
@@ -178,6 +182,12 @@ function autoPerf(fps){
   if(fps<45 && i>0){ setPerf(PERF_ORDER[i-1]); qCooldown=2; }
   else if(fps>58 && i<2){ setPerf(PERF_ORDER[i+1]); qCooldown=3; }
 }
+function updateStats(fps){
+  const el=document.getElementById('stats'); if(!el) return;
+  const touches=pointers.filter(p=>p.down).length;
+  el.textContent = Math.round(fps)+' fps   quality: '+perfLevel+(SETTINGS.quality==='auto'?' (auto)':'')+'   touches: '+touches;
+}
+function applyStats(){ const el=document.getElementById('stats'); if(el) el.style.display = SETTINGS.showStats?'block':'none'; }
 function saveSettings(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(SETTINGS)); }catch(e){} }
 
 function hexToRGB(h){
@@ -489,6 +499,7 @@ function buildPanel(){
   const h=document.createElement('div'); h.className='sectn'; h.textContent=Anim.sectionLabel||'Controls'; app.appendChild(h);
   (Anim.schema||[]).forEach(it=>app.appendChild(it.type==='toggle'?makeToggle(it.label,it.key):makeSlider(it)));
   app.appendChild(makeChips('Performance','quality',QUALITY,()=>{ if(SETTINGS.quality!=='auto') setPerf(SETTINGS.quality); }));
+  app.appendChild(makeToggle('Show performance','showStats',applyStats));
   buildBgRow(document.getElementById('bgRow'));
   const snd=document.getElementById('soundControls'); snd.innerHTML='';
   snd.appendChild(makeChips('Voice','voice',VOICES));
@@ -549,7 +560,9 @@ function loop(){
   sizeCanvas();
   const now=Date.now(), dt=Math.min((now-lastTime)/1000,0.016); lastTime=now;
   fpsAccum+=dt; fpsFrames++;
-  if(fpsAccum>=1){ const fps=fpsFrames/fpsAccum; fpsAccum=0; fpsFrames=0; if(SETTINGS.quality==='auto') autoPerf(fps); }
+  if(fpsAccum>=1){ const fps=fpsFrames/fpsAccum; fpsAccum=0; fpsFrames=0;
+    if(SETTINGS.quality==='auto') autoPerf(fps);
+    if(SETTINGS.showStats) updateStats(fps); }
   const cap = perfLevel==='low'?4 : perfLevel==='med'?6 : 10;
   for(const p of pointers){
     if(p.down){
@@ -572,6 +585,7 @@ function boot(){
   buildPanel();
   setTheme(currentTheme);
   applyBg();
+  applyStats();
   setupGL();
   canvas.addEventListener('webglcontextlost', e=>{ e.preventDefault(); glLost=true; }, false);
   canvas.addEventListener('webglcontextrestored', ()=>{ glLost=false; setupGL(); }, false);
