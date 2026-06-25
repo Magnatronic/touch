@@ -19,10 +19,6 @@ Chrome — everything works with no internet connection.
 | File | Effect | Status |
 |---|---|---|
 | `fluid_sensory.html` | Liquid Navier–Stokes fluid simulation | ✅ Built |
-| `aurora.html` | Aurora borealis curtains | Planned |
-| `galaxy.html` | Spiral galaxy gravity wells | Planned |
-| `ocean.html` | Deep-ocean bioluminescence | Planned |
-| `lava.html` | Flowing lava / domain warp | Planned |
 | `gravity_sand.html` | GPU particle sand physics | Planned |
 | `kaleidoscope.html` | Real-time mirror mandala | Planned |
 | `sound_visualiser.html` | Microphone-driven visuals | Planned |
