@@ -67,7 +67,9 @@ there. Do it in `template.html`, keep backward-compatible (fluid has only slider
 gravity_sand · kaleidoscope · sound_visualiser · bubble_wrap · lightning · shatter.
 
 ## DEFERRED idea: room lighting that mirrors on-screen colour (DMX / WLED / Philips Hue)
-Discussed, not started — revisit later. Goal: room lights match the dominant on-screen colour.
+Discussed, not started. **Do this only AFTER all the touch animations are built and working** —
+it's the final layer, not to be interleaved with the animation work. Goal: room lights match the
+dominant on-screen colour.
 
 Key constraint: a sandboxed browser page can't drive DMX/UDP and is blocked (mixed-content,
 self-signed cert, CORS) from reaching LAN lights directly. So:
