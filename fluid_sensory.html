@@ -205,13 +205,16 @@ const isWebGL2 = !!gl;
 if (!gl) gl = canvas.getContext('webgl', params) || canvas.getContext('experimental-webgl', params);
 
 let halfFloat, supportLinearFiltering;
-if (isWebGL2) {
-  gl.getExtension('EXT_color_buffer_float');
-  supportLinearFiltering = gl.getExtension('OES_texture_float_linear');
-} else {
-  halfFloat = gl.getExtension('OES_texture_half_float');
-  supportLinearFiltering = gl.getExtension('OES_texture_half_float_linear');
+function acquireExt(){   // re-run after a context restore to re-enable extensions
+  if (isWebGL2) {
+    gl.getExtension('EXT_color_buffer_float');
+    supportLinearFiltering = gl.getExtension('OES_texture_float_linear');
+  } else {
+    halfFloat = gl.getExtension('OES_texture_half_float');
+    supportLinearFiltering = gl.getExtension('OES_texture_half_float_linear');
+  }
 }
+acquireExt();
 gl.clearColor(0,0,0,1);
 
 const HALF = isWebGL2 ? gl.HALF_FLOAT : (halfFloat ? halfFloat.HALF_FLOAT_OES : gl.UNSIGNED_BYTE);
@@ -388,23 +391,29 @@ function program(vert, frag) {
   return { prog:p, uniforms };
 }
 
-const prog = {
-  copy:       program(V_SIMPLE, F_COPY),
-  clear:      program(V_SIMPLE, F_CLEAR),
-  splat:      program(V_SIMPLE, F_SPLAT),
-  advect:     program(V_SIMPLE, F_ADVECT),
-  divergence: program(V_BASE,   F_DIVERGENCE),
-  curl:       program(V_BASE,   F_CURL),
-  vorticity:  program(V_BASE,   F_VORTICITY),
-  pressure:   program(V_BASE,   F_PRESSURE),
-  gradient:   program(V_BASE,   F_GRADIENT),
-  display:    program(V_SIMPLE, F_DISPLAY),
-};
+let prog;
+function buildPrograms(){
+  prog = {
+    copy:       program(V_SIMPLE, F_COPY),
+    clear:      program(V_SIMPLE, F_CLEAR),
+    splat:      program(V_SIMPLE, F_SPLAT),
+    advect:     program(V_SIMPLE, F_ADVECT),
+    divergence: program(V_BASE,   F_DIVERGENCE),
+    curl:       program(V_BASE,   F_CURL),
+    vorticity:  program(V_BASE,   F_VORTICITY),
+    pressure:   program(V_BASE,   F_PRESSURE),
+    gradient:   program(V_BASE,   F_GRADIENT),
+    display:    program(V_SIMPLE, F_DISPLAY),
+  };
+}
 
 // ── Quad ─────────────────────────────────────────────────────────────────────
-const quadBuf = gl.createBuffer();
-gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
-gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+let quadBuf;
+function buildQuad(){
+  quadBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+}
 
 function bindQuad(p) {
   gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
@@ -412,6 +421,20 @@ function bindQuad(p) {
   gl.enableVertexAttribArray(loc);
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 }
+
+// ── Context-loss recovery ──────────────────────────────────────────────────
+// If the GPU resets (driver hiccup, projector sleep/wake), rebuild every GL
+// resource so the canvas comes back instead of staying black.
+let glLost = false;
+function setupGL(){
+  acquireExt();
+  buildPrograms();
+  buildQuad();
+  resize();
+  initFBOs();
+}
+canvas.addEventListener('webglcontextlost', e=>{ e.preventDefault(); glLost=true; }, false);
+canvas.addEventListener('webglcontextrestored', ()=>{ glLost=false; setupGL(); }, false);
 
 // ── FBO helpers ──────────────────────────────────────────────────────────────
 function createFBO(w, h, internalFormat, format, type, filter) {
@@ -633,18 +656,20 @@ function onDown(id, cx, cy) {
   p.voice = startVoice(s.x, s.y);       // instant sound, triggered right here
 }
 function onMove(id, cx, cy) {
-  const p = getPointer(id);
-  if (!p.down) return;
+  const p = pointers.find(p=>p.id===id);   // don't recreate a released pointer
+  if (!p || !p.down) return;
   const s = toSim(cx, cy);
   p.dx=s.x-p.x; p.dy=s.y-p.y;
   p.x=s.x; p.y=s.y;
   moveVoice(p.voice, s.x, s.y, Math.hypot(p.dx,p.dy));
 }
 function onUp(id) {
-  const p = getPointer(id);
-  if (!p) return;
+  const i = pointers.findIndex(p=>p.id===id);
+  if (i<0) return;
+  const p = pointers[i];
   p.down=false;
   stopVoice(p.voice); p.voice=0;
+  pointers.splice(i,1);   // release: keep the array bounded over long sessions
 }
 
 canvas.addEventListener('mousedown',e=>{ onDown('mouse',e.offsetX,e.offsetY); });
@@ -669,7 +694,7 @@ canvas.addEventListener('touchcancel',e=>{
 },{passive:false});
 
 // ── Audio ────────────────────────────────────────────────────────────────────
-let audioCtx=null, masterGain=null, convolver=null, reverbWet=null, echoWet=null, chorusWet=null;
+let audioCtx=null, masterGain=null, convolver=null, reverbWet=null, echoWet=null, chorusWet=null, limiter=null;
 
 // Voice timbre presets. oct = octave offset; partials = extra sine overtones;
 // filter tracks vertical touch position; lfo adds gentle pitch tremor.
@@ -754,11 +779,17 @@ function getAudio(){
     busA.connect(busB);                                               // dry
     busA.connect(ecDelay); ecDelay.connect(echoWet); echoWet.connect(busB);
 
+    // Master limiter — protects against clipping when 5 voices + effects stack
+    limiter=ac.createDynamicsCompressor();
+    limiter.threshold.value=-3; limiter.knee.value=0; limiter.ratio.value=20;
+    limiter.attack.value=0.003; limiter.release.value=0.25;
+    limiter.connect(ac.destination);
+
     // Reverb — convolver tail
     convolver=ac.createConvolver(); convolver.buffer=makeImpulse(ac,3.8,2.0);
     reverbWet=ac.createGain(); reverbWet.gain.value=SETTINGS.reverb?0.9:0;
-    busB.connect(ac.destination);                                     // dry
-    busB.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(ac.destination);
+    busB.connect(limiter);                                            // dry
+    busB.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(limiter);
   }
   if(audioCtx.state==='suspended') audioCtx.resume();
   return audioCtx;
@@ -774,8 +805,10 @@ function applyChorus(){ if(chorusWet) chorusWet.gain.setTargetAtTime(SETTINGS.ch
 let voiceSeq=0;
 const voices={};
 
+const MAX_VOICES=16;   // safety cap against palm presses / runaway touch counts
 function startVoice(x,y){
   try{
+    if(Object.keys(voices).length>=MAX_VOICES) return 0;
     const ac=getAudio();
     const vid=++voiceSeq;
     const V=VOICES[SETTINGS.voice]||VOICES.pure;
@@ -847,6 +880,7 @@ function applyBg(){ bgRGB = hexToRGB(SETTINGS.bg); }
 
 // ── Main loop ────────────────────────────────────────────────────────────────
 function loop(){
+  if(glLost){ requestAnimationFrame(loop); return; }   // pause rendering during context loss
   resize();
   const now=Date.now();
   const dt=Math.min((now-lastTime)/1000,0.016);
@@ -1082,8 +1116,7 @@ buildScale();
 buildPanel();
 setTheme(currentTheme);   // also builds the colour swatches
 applyBg();
-resize();                 // size the canvas before allocating buffers
-initFBOs();
+setupGL();                // build programs, quad buffer and FBOs (rebuildable on context loss)
 loop();
 </script>
 </body>
