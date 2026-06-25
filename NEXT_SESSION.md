@@ -66,6 +66,30 @@ there. Do it in `template.html`, keep backward-compatible (fluid has only slider
 ## Remaining roadmap (after flock)
 gravity_sand · kaleidoscope · sound_visualiser · bubble_wrap · lightning · shatter.
 
+## Candidate animation ideas (CS algorithms — not committed, no build order)
+Captured brainstorm. Most are GPU ping-pong shader sims like fluid_sensory (reuse that pattern:
+splat() seeds the field, frame() steps + renders, themes = colour map + rule preset). Slime mould
+is an agent system like flock.
+
+Strong recommends:
+- **Reaction–Diffusion (Gray–Scott)** — two diffusing "chemicals" → organic spots/stripes/coral
+  (Turing patterns) that grow from touch. Calm, hypnotic. GPU.
+- **Lenia / SmoothLife** — continuous (floating-point) Game of Life: soft lifelike organisms that
+  glide/pulse/divide; touch seeds life. The "beautiful Game of Life." GPU. (Classic binary GoL is a
+  weak sensory fit — flickery, dies out; if ever done, use slow tick + colour-by-age + touch reseed.)
+- **Slime mould (Physarum)** — thousands of agents lay/follow trails → glowing branching networks
+  that rewire around your touch. Showstopper, alive when idle. Agent sim (GPU or CPU).
+
+Also good:
+- **Cyclic cellular automata** — self-organising spiral waves; touch seeds spirals. GPU.
+- **Wave / ripple sim (2D wave equation)** — still pond; touches send interfering ripples. Very
+  calming, instant cause-and-effect, great with 5 fingers. GPU/cheap.
+- **Diffusion-Limited Aggregation (DLA)** — crystals/coral grow outward from each touch point.
+- **Cymatics / Chladni patterns** — sound frequency → standing-wave patterns; pairs with the audio
+  engine (touch height = frequency). Cross-over with the sound side.
+- **Flow-field particles (Perlin noise)** — calm particle streams along a field touch warps. Sibling
+  of flock — probably pick one, not both.
+
 ## DEFERRED idea: alternative input devices (accessibility) — framework-level
 Discussed, not started. **Do this after the animations exist** (framework enhancement → every
 animation benefits at once; sits alongside/just before the lighting layer). Audience: students with
