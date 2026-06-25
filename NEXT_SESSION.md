@@ -66,6 +66,30 @@ there. Do it in `template.html`, keep backward-compatible (fluid has only slider
 ## Remaining roadmap (after flock)
 gravity_sand · kaleidoscope · sound_visualiser · bubble_wrap · lightning · shatter.
 
+## DEFERRED idea: alternative input devices (accessibility) — framework-level
+Discussed, not started. **Do this after the animations exist** (framework enhancement → every
+animation benefits at once; sits alongside/just before the lighting layer). Audience: students with
+physical + learning disabilities. Principle: support a few standard browser inputs, since most
+accessibility hardware emulates keyboard/mouse/gamepad.
+
+Add input adapters that feed the EXISTING input pipeline (onDown/onMove/onUp → Anim.splat); no
+per-animation work needed. Priority order:
+1. **Keyboard + switches** (biggest win, tiny effort). Big-button switches/switch interfaces emulate
+   keys (space/enter) or mouse clicks. Add a **scanning / auto-move mode**: a cursor/attractor drifts
+   automatically and a switch press fires an effect at its position → true single-switch access.
+2. **Gamepad API** — Xbox controller AND the **Xbox Adaptive Controller** (XAC presents as a standard
+   gamepad + has 3.5mm jacks for external switches/joysticks, so this covers a lot). Stick → virtual
+   pointer/attractor; buttons → taps/bursts. Easy, no deps.
+3. **Webcam motion** (getUserMedia + cheap frame-difference) — contactless; motion centroids become
+   virtual pointers. NOTE: avoid ML pose/hand tracking (needs a model file → breaks offline/no-deps).
+4. **Microphone** — already covered by the planned `sound_visualiser`.
+5. **Web MIDI** — optional; adaptive music devices / big-pad controllers (SEN music rooms).
+6. Eye-gaze / accessibility joysticks usually emulate a mouse pointer + dwell-click → covered by mouse
+   support + keeping targets large/forgiving.
+
+All browser-native, dependency-free, offline-friendly. Implement as framework input adapters so
+keyboard/switch/gamepad/webcam all flow through the same pointer pipeline.
+
 ## DEFERRED idea: room lighting that mirrors on-screen colour (DMX / WLED / Philips Hue)
 Discussed, not started. **Do this only AFTER all the touch animations are built and working** —
 it's the final layer, not to be interleaved with the animation work. Goal: room lights match the
