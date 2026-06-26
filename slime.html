@@ -610,6 +610,7 @@ const Anim = (() => {
   let agentFBO = null, trailFBO = null;
   let pAgent, pDeposit, pDiffuse, pDisplay, pSplat;
   let quadBuf = null, indexBuf = null;
+  let floatLinear = false;
 
   // ── Shaders ────────────────────────────────────────────────────────────
   const VS_QUAD = `#version 300 es
@@ -738,8 +739,10 @@ void main(){
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, iF, w, h, 0, f, t, null);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    // Float textures require NEAREST unless OES_texture_float_linear is enabled
+    const filt = floatLinear ? gl.LINEAR : gl.NEAREST;
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filt);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filt);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     const fbo = gl.createFramebuffer();
@@ -843,6 +846,8 @@ void main(){
         if (!gl.getExtension('EXT_color_buffer_float')) {
           console.warn('EXT_color_buffer_float not available — float render targets may fail');
         }
+        gl.getExtension('EXT_float_blend');
+        floatLinear = !!gl.getExtension('OES_texture_float_linear');
       }
       // Always rebuild programs and resources (handles context restore too)
       pAgent   = mkProg(VS_QUAD,    FS_AGENT,   'a_pos');
