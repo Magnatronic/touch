@@ -611,6 +611,7 @@ const Anim = (() => {
   let pAgent, pDeposit, pDiffuse, pDisplay, pSplat;
   let quadBuf = null, indexBuf = null;
   let floatLinear = false;
+  let activePresetKey = null;
 
   // ── Shaders ────────────────────────────────────────────────────────────
   const VS_QUAD = `#version 300 es
@@ -875,6 +876,7 @@ void main(){
       buildTrailFBOs();
       randomiseAgents();
       clearTrail();
+      activePresetKey = SETTINGS.preset || 'dense';
     },
 
     resize(w, h) {
@@ -907,7 +909,13 @@ void main(){
 
     frame(dt) {
       if (!gl || !agentFBO || !trailFBO) return;
-      const pr = PRESETS[SETTINGS.preset] || PRESETS.dense;
+      const key = SETTINGS.preset || 'dense';
+      if (key !== activePresetKey) {
+        activePresetKey = key;
+        clearTrail();
+        randomiseAgents();
+      }
+      const pr = PRESETS[key] || PRESETS.dense;
       const sa = pr.sa * Math.PI / 180;
       const t  = performance.now() * 0.001 % 1000;
 
