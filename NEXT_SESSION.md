@@ -17,6 +17,7 @@ network) that also runs offline from `file://`. Hosted on GitHub Pages.
 - **`sync-framework.js`** — `node sync-framework.js` copies the `FRAMEWORK-*` regions from
   `template.html` into every other `.html` (ANIMATION blocks untouched). Run it after any framework edit.
 - **`index.html`** — landing page; tiles auto-generated from an `ITEMS` array (`file:null` = "Soon").
+- **`slime.html`** — GPU Physarum slime mould. 5 themes (Mycelium/Neon/Gold/Biolum/Ember), Repel toggle, 7 schema sliders. WebGL2 ping-pong: agent update → deposit (GL_POINTS) → diffuse+decay → display. Touch seeds trail blobs that agents swarm toward (or flee in Repel mode).
 - **`sensory_room_spec.md`** — trimmed spec (7 sections). Aurora/Galaxy/Ocean/Lava were removed from the plan.
 
 ### Architecture (important)

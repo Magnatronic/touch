@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Slime Mould – Sensory Room</title>
+<style>
+/* ===== FRAMEWORK-CSS START (synced by sync-framework.js — do not edit per file) ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+
+/* ── Control bar ─────────────────────────────────────────── */
+#ui{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;z-index:10;opacity:0.45;transition:opacity 0.4s;align-items:center}
+#ui:hover,#ui.open{opacity:1}
+.btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.9);
+  padding:9px 18px;border-radius:22px;font-size:13px;cursor:pointer;font-family:sans-serif;
+  transition:all 0.2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;white-space:nowrap}
+.btn.active,.btn:hover{background:rgba(255,255,255,0.22);border-color:rgba(255,255,255,0.5)}
+#collapse{padding:10px 16px;font-size:16px}
+.cat{display:none}
+#ui.menu .cat{display:inline-flex}
+
+/* ── Settings panel ──────────────────────────────────────── */
+#panel{position:fixed;left:50%;bottom:74px;transform:translate(-50%,12px);
+  width:calc(100% - 32px);max-width:520px;background:rgba(0,0,0,0.85);backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 22px;z-index:20;
+  opacity:0;pointer-events:none;transition:opacity 0.25s ease, transform 0.25s ease;
+  font-family:sans-serif;color:#fff;max-height:72vh;overflow-y:auto}
+#panel.open{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.sectn{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
+  color:rgba(255,255,255,0.35);margin:18px 0 8px}
+.pane > .sectn:first-child{margin-top:2px}
+.row{margin-bottom:14px}
+.rowhead{display:flex;justify-content:space-between;align-items:center}
+.rowhead label{color:rgba(255,255,255,0.7);font-size:13px}
+.rowhead .val{color:rgba(255,255,255,0.5);font-size:13px;font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;margin-top:8px;
+  background:rgba(255,255,255,0.15);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:#fff;cursor:pointer;border:none}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;cursor:pointer;border:none}
+.toggle{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.toggle label{color:rgba(255,255,255,0.7);font-size:13px}
+.switch{position:relative;width:44px;height:24px;background:rgba(255,255,255,0.15);
+  border-radius:12px;cursor:pointer;transition:background 0.2s}
+.switch.on{background:rgba(120,180,255,0.7)}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;
+  border-radius:50%;background:#fff;transition:transform 0.2s}
+.switch.on::after{transform:translateX(20px)}
+.panelBtns{display:flex;gap:10px;margin-top:18px}
+.panelBtns .btn{flex:1;text-align:center;padding:11px}
+.swatch{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform 0.15s}
+.swatch:hover{transform:scale(1.12)}
+.swatch.active{border-color:#fff}
+#colourGroup{display:flex;align-items:center;gap:8px;padding:4px 10px;margin-bottom:8px;
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:22px}
+.autochip{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
+  color:rgba(255,255,255,0.9);height:30px;padding:0 12px;border-radius:15px;font-size:13px;cursor:pointer;
+  transition:all 0.2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;
+  display:flex;align-items:center;justify-content:center;gap:4px;flex:none;white-space:nowrap}
+.autochip:hover{background:rgba(255,255,255,0.22)}
+.autochip.active{background:rgba(255,255,255,0.22);border-color:#fff}
+#barSwatches{display:flex;gap:6px;align-items:center}
+#barSwatches .swatch{width:24px;height:24px;border:2px solid rgba(255,255,255,0.25)}
+#barSwatches .swatch.active{border-color:#fff;transform:scale(1.1)}
+.picker{position:relative;width:24px;height:24px;border-radius:50%;overflow:hidden;
+  border:2px solid rgba(255,255,255,0.25);cursor:pointer;
+  background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)}
+.picker.active{border-color:#fff}
+.picker input{position:absolute;inset:-4px;width:200%;height:200%;opacity:0;cursor:pointer;border:none;padding:0}
+.bgrow{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.bgsw{width:28px;height:28px;border-radius:8px;cursor:pointer;border:2px solid rgba(255,255,255,0.25);transition:transform 0.15s}
+.bgsw:hover{transform:scale(1.1)}
+.bgsw.active{border-color:#fff}
+.note{font-size:12px;color:rgba(255,255,255,0.4);margin:4px 0 8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 14px}
+.chip{padding:7px 13px;border-radius:16px;background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.85);font-size:12px;cursor:pointer;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;transition:all 0.15s}
+.chip:hover{background:rgba(255,255,255,0.16)}
+.chip.active{background:rgba(255,255,255,0.24);border-color:#fff;color:#fff}
+#tabs{display:flex;gap:8px;margin:2px 0 16px}
+.tab{flex:1;padding:11px;border-radius:12px;background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.65);font-size:14px;cursor:pointer;
+  font-family:sans-serif;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;transition:all 0.15s}
+.tab.active{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.6);color:#fff}
+.pane{display:none}
+.pane.active{display:block}
+.themeRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+#stats{position:fixed;top:10px;left:12px;z-index:30;display:none;
+  font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:rgba(255,255,255,0.85);
+  background:rgba(0,0,0,0.45);padding:6px 9px;border-radius:8px;pointer-events:none;white-space:pre}
+/* ===== FRAMEWORK-CSS END ===== */
+</style>
+</head>
+<body>
+<!-- ===== FRAMEWORK-HTML START (synced — do not edit per file) ===== -->
+<canvas id="c"></canvas>
+<div id="stats"></div>
+
+<div id="ui">
+  <button class="btn" id="collapse" title="Menu">≡</button>
+  <button class="btn cat" data-pane="appearance">✨ Appearance</button>
+  <button class="btn cat" data-pane="sound">🔊 Sound</button>
+</div>
+
+<div id="panel">
+  <div class="pane active" id="paneAppearance">
+    <div class="sectn">Theme</div>
+    <div class="themeRow" id="themeRow"></div>
+    <div class="sectn">Colour</div>
+    <div id="colourGroup">
+      <button id="autoBtn" class="autochip" title="Cycle through palette colours">↻ Auto</button>
+      <div id="barSwatches" title="Tap a colour to lock it"></div>
+    </div>
+    <div id="appSliders"></div>
+    <div class="sectn">Background</div>
+    <div class="bgrow" id="bgRow"></div>
+  </div>
+
+  <div class="pane" id="paneSound">
+    <div id="soundControls"></div>
+  </div>
+
+  <div class="panelBtns">
+    <button class="btn" id="clearBtn">🧹 Clear canvas</button>
+    <button class="btn" id="resetBtn">↺ Reset settings</button>
+  </div>
+</div>
+<!-- ===== FRAMEWORK-HTML END ===== -->
+
+<script>
+'use strict';
+/* ===== FRAMEWORK-JS START (synced by sync-framework.js — do not edit per file) =====
+   Shared scaffolding for every animation: settings + persistence, colour system,
+   audio engine, 5-touch input, the settings panel, and the lifecycle/render loop.
+   The animation supplies an `Anim` object (see ANIMATION block below) with:
+     themes, defaults, schema, sectionLabel, init(canvas), resize(w,h),
+     splat(x,y,dx,dy,color,opts), frame(dt), reset()
+   Coordinates passed to splat() are normalised 0..1 with y pointing UP.
+*/
+
+const canvas   = document.getElementById('c');
+const ui       = document.getElementById('ui');
+const panel    = document.getElementById('panel');
+const themeRow = document.getElementById('themeRow');
+const barSwatches = document.getElementById('barSwatches');
+const autoBtn  = document.getElementById('autoBtn');
+
+const STORE_KEY = 'settings:' + location.pathname.split('/').pop();
+
+// Settings shared by every animation (the animation adds its own via Anim.defaults)
+const SHARED_DEFAULTS = {
+  volume:0.30, bg:'#000000', lockedColor:null,
+  voice:'pure', scale:'penta', reverb:false, echo:false, chorus:false, mute:false,
+  quality:'auto', showStats:false,
+};
+
+let SETTINGS = {}, currentTheme = '', colorIdx = 0;
+let bgRGB = [0,0,0];
+
+function initSettings(){
+  SETTINGS = Object.assign({}, SHARED_DEFAULTS, Anim.defaults||{});
+  try { SETTINGS = Object.assign(SETTINGS, JSON.parse(localStorage.getItem(STORE_KEY)||'{}')); } catch(e){}
+  const themeKeys = Object.keys(Anim.themes);
+  currentTheme = themeKeys.includes(SETTINGS.theme) ? SETTINGS.theme : themeKeys[0];
+  bgRGB = hexToRGB(SETTINGS.bg);
+  perfLevel = (SETTINGS.quality && SETTINGS.quality!=='auto') ? SETTINGS.quality : 'high';
+}
+
+// ── Performance / quality (auto-scaling + manual override) ──────────────────────
+const QUALITY = { auto:{label:'Auto'}, high:{label:'High'}, med:{label:'Medium'}, low:{label:'Low'} };
+const PERF_ORDER = ['low','med','high'];
+let perfLevel = 'high', qCooldown = 0;
+function activeQuality(){ return perfLevel; }
+function setPerf(level){ if(level===perfLevel) return; perfLevel=level; if(Anim.setQuality) Anim.setQuality(level); }
+function autoPerf(fps){
+  if(qCooldown>0){ qCooldown--; return; }
+  const i=PERF_ORDER.indexOf(perfLevel);
+  if(fps<45 && i>0){ setPerf(PERF_ORDER[i-1]); qCooldown=2; }
+  else if(fps>58 && i<2){ setPerf(PERF_ORDER[i+1]); qCooldown=3; }
+}
+function updateStats(fps){
+  const el=document.getElementById('stats'); if(!el) return;
+  const touches=pointers.filter(p=>p.down).length;
+  el.textContent = Math.round(fps)+' fps   quality: '+perfLevel+(SETTINGS.quality==='auto'?' (auto)':'')+'   touches: '+touches;
+}
+function applyStats(){ const el=document.getElementById('stats'); if(el) el.style.display = SETTINGS.showStats?'block':'none'; }
+function saveSettings(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(SETTINGS)); }catch(e){} }
+
+function hexToRGB(h){
+  h=h.replace('#','');
+  return [parseInt(h.substr(0,2),16)/255, parseInt(h.substr(2,2),16)/255, parseInt(h.substr(4,2),16)/255];
+}
+function applyBg(){ bgRGB = hexToRGB(SETTINGS.bg); }
+
+// ── Colour ────────────────────────────────────────────────────────────────────
+const VIVID = 1.25;
+function pickColor(){
+  let c;
+  if (SETTINGS.lockedColor) c = SETTINGS.lockedColor;
+  else { const cols = Anim.themes[currentTheme].colors; c = cols[colorIdx++ % cols.length]; }
+  return [c[0]*VIVID, c[1]*VIVID, c[2]*VIVID];
+}
+
+// ── Audio engine ───────────────────────────────────────────────────────────────
+let audioCtx=null, masterGain=null, convolver=null, reverbWet=null, echoWet=null, chorusWet=null, limiter=null;
+
+const VOICES = {
+  pure:  {label:'Pure',  oct:0,  gain:0.12, filter:{type:'lowpass', base:1300, track:1600}, lfo:{rate:5,depth:0.007},
+    oscs:[{type:'sine'}]},
+  warm:  {label:'Warm',  oct:0,  gain:0.13, filter:{type:'lowpass', base:780,  track:1100}, lfo:{rate:4,depth:0.005},
+    oscs:[{type:'triangle'},{type:'sine',detune:7,gain:0.6},{type:'sine',detune:-7,gain:0.6}]},
+  bell:  {label:'Bell',  oct:0,  gain:0.12, filter:{type:'lowpass', base:4500, track:2000}, lfo:{rate:0,depth:0},
+    oscs:[{type:'sine'},{type:'sine',ratio:2.76,gain:0.5,decayTo:0.04},{type:'sine',ratio:5.4,gain:0.25,decayTo:0.02}]},
+  glass: {label:'Glass', oct:0,  gain:0.13, filter:{type:'highpass',base:350,  track:250},  lfo:{rate:7,depth:0.012},
+    oscs:[{type:'sine'},{type:'sine',ratio:3.0,gain:0.45,decayTo:0.35},{type:'sine',ratio:4.2,gain:0.22,decayTo:0.25}]},
+  deep:  {label:'Deep',  oct:-1, gain:0.18, filter:{type:'lowpass', base:700,  track:900},  lfo:{rate:2,depth:0.005},
+    oscs:[{type:'sine'},{type:'sine',ratio:2,gain:0.55},{type:'sine',ratio:3,gain:0.2}]},
+  pluck: {label:'Pluck', oct:0,  gain:0.18, filter:{type:'lowpass', base:1800, track:1600}, lfo:{rate:0,depth:0}, pluck:1.6,
+    oscs:[{type:'triangle'},{type:'sine',ratio:2,gain:0.3}]},
+  synth: {label:'Synth', oct:0,  gain:0.10, filter:{type:'lowpass', base:600,  track:2800, q:7}, lfo:{rate:0,depth:0},
+    oscs:[{type:'sawtooth'},{type:'sawtooth',detune:11,gain:0.7},{type:'sawtooth',detune:-11,gain:0.7}]},
+  retro: {label:'Retro', oct:0,  gain:0.09, filter:{type:'lowpass', base:2600, track:1400}, lfo:{rate:6,depth:0.004},
+    oscs:[{type:'square'}]},
+  pad:   {label:'Pad',   oct:-1, gain:0.11, filter:{type:'lowpass', base:500,  track:1400, q:2}, lfo:{rate:3,depth:0.006},
+    oscs:[{type:'sawtooth',detune:6,gain:0.6},{type:'sawtooth',detune:-6,gain:0.6},{type:'sine',ratio:2,gain:0.3}]},
+};
+const SCALES = {
+  penta: {label:'Pentatonic', steps:[0,2,4,7,9]},
+  major: {label:'Major',      steps:[0,2,4,5,7,9,11]},
+  minor: {label:'Minor',      steps:[0,2,3,5,7,8,10]},
+  whole: {label:'Whole-tone', steps:[0,2,4,6,8,10]},
+};
+let FREQS=[];
+function buildScale(){
+  const base=130.81, steps=(SCALES[SETTINGS.scale]||SCALES.penta).steps, arr=[];
+  for(let oct=0;oct<3;oct++) for(const s of steps) arr.push(base*Math.pow(2,(s+12*oct)/12));
+  FREQS=arr;
+}
+function freqForX(x){ const i=Math.max(0,Math.min(FREQS.length-1,Math.floor(x*FREQS.length))); return FREQS[i]||110; }
+
+function makeImpulse(ac,dur,decay){
+  const len=Math.floor(ac.sampleRate*dur), buf=ac.createBuffer(2,len,ac.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay);}
+  return buf;
+}
+function getAudio(){
+  if(!audioCtx){
+    const ac=audioCtx=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
+    masterGain=ac.createGain(); masterGain.gain.value=SETTINGS.mute?0:SETTINGS.volume;
+    // Chorus
+    const chDelay=ac.createDelay(); chDelay.delayTime.value=0.026;
+    const chLfo=ac.createOscillator(); chLfo.frequency.value=0.6;
+    const chDepth=ac.createGain(); chDepth.gain.value=0.004;
+    chLfo.connect(chDepth); chDepth.connect(chDelay.delayTime); chLfo.start();
+    chorusWet=ac.createGain(); chorusWet.gain.value=SETTINGS.chorus?0.6:0;
+    const busA=ac.createGain();
+    masterGain.connect(busA);
+    masterGain.connect(chDelay); chDelay.connect(chorusWet); chorusWet.connect(busA);
+    // Echo
+    const ecDelay=ac.createDelay(); ecDelay.delayTime.value=0.33;
+    const ecFb=ac.createGain(); ecFb.gain.value=0.42;
+    ecDelay.connect(ecFb); ecFb.connect(ecDelay);
+    echoWet=ac.createGain(); echoWet.gain.value=SETTINGS.echo?0.5:0;
+    const busB=ac.createGain();
+    busA.connect(busB);
+    busA.connect(ecDelay); ecDelay.connect(echoWet); echoWet.connect(busB);
+    // Limiter
+    limiter=ac.createDynamicsCompressor();
+    limiter.threshold.value=-3; limiter.knee.value=0; limiter.ratio.value=20;
+    limiter.attack.value=0.003; limiter.release.value=0.25;
+    limiter.connect(ac.destination);
+    // Reverb
+    convolver=ac.createConvolver(); convolver.buffer=makeImpulse(ac,3.8,2.0);
+    reverbWet=ac.createGain(); reverbWet.gain.value=SETTINGS.reverb?0.9:0;
+    busB.connect(limiter);
+    busB.connect(convolver); convolver.connect(reverbWet); reverbWet.connect(limiter);
+  }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  return audioCtx;
+}
+function applyVolume(){ if(masterGain) masterGain.gain.setTargetAtTime(SETTINGS.mute?0:SETTINGS.volume, audioCtx.currentTime, 0.05); }
+function applyReverb(){ if(reverbWet) reverbWet.gain.setTargetAtTime(SETTINGS.reverb?0.9:0, audioCtx.currentTime, 0.1); }
+function applyEcho(){   if(echoWet)   echoWet.gain.setTargetAtTime(SETTINGS.echo?0.5:0,     audioCtx.currentTime, 0.1); }
+function applyChorus(){ if(chorusWet) chorusWet.gain.setTargetAtTime(SETTINGS.chorus?0.6:0, audioCtx.currentTime, 0.1); }
+
+let voiceSeq=0; const voices={}; const MAX_VOICES=16;
+function startVoice(x,y){
+  try{
+    if(Object.keys(voices).length>=MAX_VOICES) return 0;
+    const ac=getAudio(), vid=++voiceSeq, V=VOICES[SETTINGS.voice]||VOICES.pure;
+    const freq=freqForX(x)*Math.pow(2,V.oct), t=ac.currentTime;
+    const gain=ac.createGain();
+    const pan=ac.createStereoPanner(); pan.pan.value=(x*2-1)*0.6;
+    const filt=ac.createBiquadFilter(); filt.type=V.filter.type; filt.frequency.value=V.filter.base+y*V.filter.track;
+    if(V.filter.q) filt.Q.value=V.filter.q;
+    filt.connect(gain); gain.connect(pan); pan.connect(masterGain);
+    const nodes=[];
+    for(const o of V.oscs){
+      const ratio=o.ratio||1;
+      const osc=ac.createOscillator(); osc.type=o.type||'sine'; osc.frequency.value=freq*ratio;
+      if(o.detune) osc.detune.value=o.detune;
+      const g=ac.createGain(); g.gain.setValueAtTime(o.gain!==undefined?o.gain:1, t);
+      if(o.decayTo!==undefined) g.gain.setTargetAtTime((o.gain!==undefined?o.gain:1)*o.decayTo, t, 0.5);
+      osc.connect(g); g.connect(filt); osc.start();
+      nodes.push({osc,ratio});
+    }
+    let lfo=null;
+    if(V.lfo.rate>0){
+      lfo=ac.createOscillator(); const lfoG=ac.createGain();
+      lfo.frequency.value=V.lfo.rate; lfoG.gain.value=freq*V.lfo.depth;
+      lfo.connect(lfoG); nodes.forEach(n=>lfoG.connect(n.osc.frequency)); lfo.start();
+    }
+    gain.gain.setValueAtTime(0.0001,t);
+    gain.gain.linearRampToValueAtTime(V.gain,t+0.02);
+    if(V.pluck) gain.gain.exponentialRampToValueAtTime(0.0008, t+0.02+V.pluck);
+    voices[vid]={nodes,lfo,gain,pan,filt,freq,V};
+    return vid;
+  }catch(e){ return 0; }
+}
+function moveVoice(vid,x,y,speed){
+  const v=voices[vid]; if(!v) return;
+  try{
+    const now=getAudio().currentTime, V=v.V;
+    v.freq=freqForX(x)*Math.pow(2,V.oct);
+    v.nodes.forEach(n=>n.osc.frequency.setTargetAtTime(v.freq*n.ratio,now,0.06));
+    v.pan.pan.setTargetAtTime((x*2-1)*0.6,now,0.08);
+    v.filt.frequency.setTargetAtTime(V.filter.base+y*V.filter.track,now,0.08);
+  }catch(e){}
+}
+function stopVoice(vid){
+  const v=voices[vid]; if(!v) return;
+  delete voices[vid];
+  try{
+    const ac=getAudio(), t=ac.currentTime;
+    v.gain.gain.cancelScheduledValues(t);
+    v.gain.gain.setValueAtTime(v.gain.gain.value,t);
+    v.gain.gain.setTargetAtTime(0,t,0.25);
+    const stopAt=t+1.2;
+    v.nodes.forEach(n=>{try{n.osc.stop(stopAt);}catch(e){}});
+    if(v.lfo){try{v.lfo.stop(stopAt);}catch(e){}}
+    v.nodes[0].osc.onended=()=>{try{v.gain.disconnect();v.pan.disconnect();v.filt.disconnect();}catch(e){}};
+  }catch(e){}
+}
+
+// ── Input (up to 5 independent touches + mouse fallback) ───────────────────────
+class Pointer {
+  constructor(id){ this.id=id; this.x=0; this.y=0; this.px=0; this.py=0;
+    this.dx=0; this.dy=0; this.down=false; this.moved=false; this.color=[1,1,1]; this.voice=0; }
+}
+const pointers = [];
+function getPointer(id){ let p=pointers.find(p=>p.id===id); if(!p){p=new Pointer(id); pointers.push(p);} return p; }
+function toSim(x,y){ return { x: x/canvas.clientWidth, y: 1-y/canvas.clientHeight }; }
+
+function onDown(id, cx, cy){
+  const p=getPointer(id), s=toSim(cx,cy);
+  p.x=s.x; p.y=s.y; p.px=s.x; p.py=s.y; p.dx=0; p.dy=0;
+  p.down=true; p.moved=false; p.color=pickColor();
+  if(p.voice) stopVoice(p.voice);
+  p.voice=startVoice(s.x,s.y);
+}
+function onMove(id, cx, cy){
+  const p=pointers.find(p=>p.id===id);
+  if(!p || !p.down) return;
+  const s=toSim(cx,cy);
+  p.dx=s.x-p.x; p.dy=s.y-p.y; p.x=s.x; p.y=s.y;
+  moveVoice(p.voice, s.x, s.y, Math.hypot(p.dx,p.dy));
+}
+function onUp(id){
+  const i=pointers.findIndex(p=>p.id===id); if(i<0) return;
+  const p=pointers[i]; p.down=false; stopVoice(p.voice); p.voice=0;
+  pointers.splice(i,1);
+}
+canvas.addEventListener('mousedown',e=>{ onDown('mouse',e.offsetX,e.offsetY); });
+canvas.addEventListener('mousemove',e=>{ onMove('mouse',e.offsetX,e.offsetY); });
+window.addEventListener('mouseup',()=>{ onUp('mouse'); });
+canvas.addEventListener('touchstart',e=>{ e.preventDefault(); const r=canvas.getBoundingClientRect();
+  for(const t of e.changedTouches) onDown(t.identifier,t.clientX-r.left,t.clientY-r.top); },{passive:false});
+canvas.addEventListener('touchmove',e=>{ e.preventDefault(); const r=canvas.getBoundingClientRect();
+  for(const t of e.changedTouches) onMove(t.identifier,t.clientX-r.left,t.clientY-r.top); },{passive:false});
+canvas.addEventListener('touchend',e=>{ for(const t of e.changedTouches) onUp(t.identifier); },{passive:false});
+canvas.addEventListener('touchcancel',e=>{ for(const t of e.changedTouches) onUp(t.identifier); },{passive:false});
+
+// ── Settings panel UI ──────────────────────────────────────────────────────────
+function rgbCss(c){ return `rgb(${Math.round(Math.min(c[0],1)*255)},${Math.round(Math.min(c[1],1)*255)},${Math.round(Math.min(c[2],1)*255)})`; }
+
+function setTheme(name){
+  currentTheme=name; SETTINGS.theme=name; saveSettings();
+  themeRow.querySelectorAll('.btn').forEach(x=>x.classList.toggle('active',x.dataset.theme===name));
+  buildSwatches();
+}
+function buildThemeButtons(){
+  themeRow.innerHTML='';
+  for(const k in Anim.themes){
+    const b=document.createElement('button'); b.className='btn'+(k===currentTheme?' active':'');
+    b.dataset.theme=k; b.textContent=Anim.themes[k].label||k;
+    b.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); setTheme(k); });
+    themeRow.appendChild(b);
+  }
+}
+function refreshColourUI(){
+  const locked=SETTINGS.lockedColor;
+  autoBtn.classList.toggle('active',!locked);
+  barSwatches.querySelectorAll('.swatch').forEach(sw=>{
+    const c=sw._rgb;
+    sw.classList.toggle('active', !!locked && c && Math.abs(c[0]-locked[0])<0.01 && Math.abs(c[1]-locked[1])<0.01 && Math.abs(c[2]-locked[2])<0.01);
+  });
+  const pk=barSwatches.querySelector('.picker');
+  if(pk) pk.classList.toggle('active', !!locked && !barSwatches.querySelector('.swatch.active'));
+}
+function lockColour(rgb){ SETTINGS.lockedColor = rgb ? rgb.slice() : null; saveSettings(); refreshColourUI(); }
+function buildSwatches(){
+  barSwatches.innerHTML='';
+  Anim.themes[currentTheme].colors.forEach(c=>{
+    const sw=document.createElement('div'); sw.className='swatch'; sw._rgb=c.slice(); sw.style.background=rgbCss(c);
+    sw.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); lockColour(c); });
+    barSwatches.appendChild(sw);
+  });
+  const pk=document.createElement('label'); pk.className='picker'; pk.title='Pick a custom colour';
+  const inp=document.createElement('input'); inp.type='color';
+  inp.value = SETTINGS.lockedColor ? '#'+SETTINGS.lockedColor.map(v=>('0'+Math.round(Math.min(v,1)*255).toString(16)).slice(-2)).join('') : '#ffffff';
+  inp.addEventListener('input',e=>{ e.stopPropagation(); getAudio(); lockColour(hexToRGB(inp.value)); });
+  pk.addEventListener('click',e=>e.stopPropagation());
+  pk.appendChild(inp); barSwatches.appendChild(pk);
+  refreshColourUI();
+}
+autoBtn.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); lockColour(null); });
+
+function makeSlider(item){
+  const row=document.createElement('div'); row.className='row';
+  const head=document.createElement('div'); head.className='rowhead';
+  const lab=document.createElement('label'); lab.textContent=item.label;
+  const val=document.createElement('span'); val.className='val';
+  head.appendChild(lab); head.appendChild(val);
+  const inp=document.createElement('input');
+  inp.type='range'; inp.min=item.min; inp.max=item.max; inp.step=item.step; inp.value=SETTINGS[item.key];
+  val.textContent=Number(SETTINGS[item.key]).toFixed(item.dp);
+  inp.addEventListener('input',()=>{
+    const v=parseFloat(inp.value); SETTINGS[item.key]=v; val.textContent=v.toFixed(item.dp);
+    if(item.key==='volume') applyVolume();
+    saveSettings();
+  });
+  row.appendChild(head); row.appendChild(inp);
+  return row;
+}
+function makeToggle(label,key,onChange){
+  const row=document.createElement('div'); row.className='toggle';
+  const lab=document.createElement('label'); lab.textContent=label;
+  const sw=document.createElement('div'); sw.className='switch'+(SETTINGS[key]?' on':'');
+  sw.addEventListener('click',e=>{ e.stopPropagation(); getAudio();
+    SETTINGS[key]=!SETTINGS[key]; sw.classList.toggle('on',SETTINGS[key]); saveSettings(); if(onChange) onChange(); });
+  row.appendChild(lab); row.appendChild(sw);
+  return row;
+}
+function makeChips(label,key,map,onChange){
+  const wrap=document.createElement('div');
+  const sec=document.createElement('div'); sec.className='sectn'; sec.textContent=label; wrap.appendChild(sec);
+  const chips=document.createElement('div'); chips.className='chips';
+  for(const k in map){
+    const c=document.createElement('div'); c.className='chip'+(SETTINGS[key]===k?' active':'');
+    c.textContent=map[k].label;
+    c.addEventListener('click',e=>{ e.stopPropagation(); getAudio();
+      SETTINGS[key]=k; saveSettings();
+      chips.querySelectorAll('.chip').forEach(x=>x.classList.remove('active')); c.classList.add('active');
+      if(onChange) onChange(); });
+    chips.appendChild(c);
+  }
+  wrap.appendChild(chips); return wrap;
+}
+const BG_PRESETS = [
+  ['Black','#000000'],['Navy','#0a1228'],['Charcoal','#1a1a1f'],
+  ['Deep purple','#150720'],['Forest','#04140c'],
+];
+function buildBgRow(container){
+  container.innerHTML='';
+  BG_PRESETS.forEach(([label,hex])=>{
+    const sw=document.createElement('div'); sw.className='bgsw'; sw.title=label; sw.style.background=hex; sw._hex=hex;
+    sw.addEventListener('click',e=>{ e.stopPropagation(); SETTINGS.bg=hex; saveSettings(); applyBg(); refreshBgRow(container); });
+    container.appendChild(sw);
+  });
+  const pk=document.createElement('label'); pk.className='picker'; pk.style.borderRadius='8px'; pk.title='Custom background';
+  const inp=document.createElement('input'); inp.type='color'; inp.value=SETTINGS.bg;
+  inp.addEventListener('input',e=>{ e.stopPropagation(); SETTINGS.bg=inp.value; saveSettings(); applyBg(); refreshBgRow(container); });
+  pk.addEventListener('click',e=>e.stopPropagation());
+  pk.appendChild(inp); container.appendChild(pk);
+  refreshBgRow(container);
+}
+function refreshBgRow(container){
+  let matched=false;
+  container.querySelectorAll('.bgsw').forEach(sw=>{ const on=sw._hex.toLowerCase()===SETTINGS.bg.toLowerCase(); sw.classList.toggle('active',on); if(on) matched=true; });
+  const pk=container.querySelector('.picker'); if(pk) pk.classList.toggle('active',!matched);
+}
+function buildPanel(){
+  const app=document.getElementById('appSliders'); app.innerHTML='';
+  const h=document.createElement('div'); h.className='sectn'; h.textContent=Anim.sectionLabel||'Controls'; app.appendChild(h);
+  (Anim.schema||[]).forEach(it=>app.appendChild(it.type==='toggle'?makeToggle(it.label,it.key):makeSlider(it)));
+  app.appendChild(makeChips('Performance','quality',QUALITY,()=>{ if(SETTINGS.quality!=='auto') setPerf(SETTINGS.quality); }));
+  app.appendChild(makeToggle('Show performance','showStats',applyStats));
+  buildBgRow(document.getElementById('bgRow'));
+  const snd=document.getElementById('soundControls'); snd.innerHTML='';
+  snd.appendChild(makeChips('Voice','voice',VOICES));
+  snd.appendChild(makeChips('Scale / mood','scale',SCALES,buildScale));
+  const fx=document.createElement('div'); fx.className='sectn'; fx.textContent='Effects'; snd.appendChild(fx);
+  snd.appendChild(makeToggle('Reverb','reverb',applyReverb));
+  snd.appendChild(makeToggle('Echo',  'echo',  applyEcho));
+  snd.appendChild(makeToggle('Chorus','chorus',applyChorus));
+  snd.appendChild(makeToggle('Mute',  'mute',  applyVolume));
+  snd.appendChild(makeSlider({key:'volume',label:'Volume',min:0,max:1,step:0.01,dp:2}));
+}
+
+// ── Menu / tabs ─────────────────────────────────────────────────────────────────
+let currentPane=null;
+function showPane(name){
+  currentPane=name;
+  const id='pane'+name.charAt(0).toUpperCase()+name.slice(1);
+  document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('active',p.id===id));
+  document.querySelectorAll('.cat').forEach(c=>c.classList.toggle('active',c.dataset.pane===name));
+  panel.classList.add('open');
+}
+function closePanel(){ currentPane=null; panel.classList.remove('open'); document.querySelectorAll('.cat').forEach(c=>c.classList.remove('active')); }
+document.getElementById('collapse').addEventListener('click',e=>{
+  e.stopPropagation(); getAudio();
+  if(ui.classList.contains('menu')){ ui.classList.remove('menu'); closePanel(); } else { ui.classList.add('menu'); }
+});
+document.querySelectorAll('.cat').forEach(c=>{
+  c.addEventListener('click',e=>{ e.stopPropagation(); getAudio();
+    const name=c.dataset.pane; if(currentPane===name) closePanel(); else showPane(name); });
+});
+document.getElementById('clearBtn').addEventListener('click',e=>{ e.stopPropagation(); if(Anim.reset) Anim.reset(); });
+document.getElementById('resetBtn').addEventListener('click',e=>{
+  e.stopPropagation();
+  SETTINGS=Object.assign({}, SHARED_DEFAULTS, Anim.defaults||{}); saveSettings();
+  buildThemeButtons(); setTheme(SETTINGS.theme); buildPanel(); buildScale();
+  applyVolume(); applyReverb(); applyEcho(); applyChorus(); applyBg();
+  if(Anim.reset) Anim.reset();
+});
+panel.addEventListener('mousedown',e=>e.stopPropagation());
+panel.addEventListener('touchstart',e=>e.stopPropagation(),{passive:false});
+
+// ── Lifecycle / render loop ──────────────────────────────────────────────────────
+let glLost=false, lastTime=Date.now(), fpsAccum=0, fpsFrames=0;
+function sizeCanvas(){
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=Math.round(canvas.clientWidth*dpr), h=Math.round(canvas.clientHeight*dpr);
+  if(canvas.width!==w || canvas.height!==h){ canvas.width=w; canvas.height=h; if(Anim.resize) Anim.resize(w,h); }
+}
+function setupGL(){
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=Math.round(canvas.clientWidth*dpr)||canvas.width;
+  canvas.height=Math.round(canvas.clientHeight*dpr)||canvas.height;
+  if(Anim.init) Anim.init(canvas);
+  if(Anim.resize) Anim.resize(canvas.width,canvas.height);
+}
+function loop(){
+  if(glLost){ requestAnimationFrame(loop); return; }
+  sizeCanvas();
+  const now=Date.now(), dt=Math.min((now-lastTime)/1000,0.016); lastTime=now;
+  fpsAccum+=dt; fpsFrames++;
+  if(fpsAccum>=1){ const fps=fpsFrames/fpsAccum; fpsAccum=0; fpsFrames=0;
+    if(SETTINGS.quality==='auto') autoPerf(fps);
+    if(SETTINGS.showStats) updateStats(fps); }
+  const cap = perfLevel==='low'?4 : perfLevel==='med'?6 : 10;
+  for(const p of pointers){
+    if(p.down){
+      const mdx=p.x-p.px, mdy=p.y-p.py, dist=Math.hypot(mdx,mdy);
+      if(!p.moved){ Anim.splat(p.x,p.y,0,0,p.color,{velScale:0}); p.moved=true; }
+      else if(dist>0.00001){
+        const steps=Math.min(Math.max(1,Math.ceil(dist/0.012)),cap);
+        for(let i=1;i<=steps;i++){ const t=i/steps; Anim.splat(p.px+mdx*t,p.py+mdy*t,p.dx,p.dy,p.color,{velScale:1/steps}); }
+      }
+      p.px=p.x; p.py=p.y; p.dx*=0.85; p.dy*=0.85;
+    }
+  }
+  Anim.frame(dt);
+  requestAnimationFrame(loop);
+}
+function boot(){
+  initSettings();
+  buildScale();
+  buildThemeButtons();
+  buildPanel();
+  setTheme(currentTheme);
+  applyBg();
+  applyStats();
+  setupGL();
+  canvas.addEventListener('webglcontextlost', e=>{ e.preventDefault(); glLost=true; }, false);
+  canvas.addEventListener('webglcontextrestored', ()=>{ glLost=false; setupGL(); }, false);
+  loop();
+}
+/* ===== FRAMEWORK-JS END ===== */
+
+/* ===== ANIMATION START =====
+   Physarum / Slime Mould — GPU Physarum polycephalum simulation.
+   Up to 262 144 agents deposit pheromone trail, sense it at three forward
+   angles and steer toward the strongest reading. Trail diffuses and decays
+   each step, forming self-organising branching networks.
+   Requires WebGL2 + EXT_color_buffer_float.
+*/
+const Anim = (() => {
+
+  // ── State ──────────────────────────────────────────────────────────────
+  let gl;
+  let W = 0, H = 0;
+  let agentTexW = 512, agentTexH = 512;
+  let trailW = 0, trailH = 0;
+  let agentFBO = null, trailFBO = null;
+  let pAgent, pDeposit, pDiffuse, pDisplay, pSplat;
+  let quadBuf = null, indexBuf = null;
+
+  // ── Shaders ────────────────────────────────────────────────────────────
+  const VS_QUAD = `#version 300 es
+in vec2 a_pos;out vec2 v_uv;
+void main(){v_uv=a_pos*.5+.5;gl_Position=vec4(a_pos,0.,1.);}`;
+
+  // Agent update: sense trail at three positions, turn, move.
+  const FS_AGENT = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+uniform sampler2D u_agents;
+uniform sampler2D u_trail;
+uniform float u_speed;
+uniform float u_sa;
+uniform float u_sd;
+uniform vec2  u_tr;
+uniform float u_time;
+out vec4 frag;
+float rnd(vec2 p){p=fract(p*vec2(23.3,47.1));p+=dot(p,p+33.3);return fract(p.x*p.y);}
+float sense(vec2 pos,float ang){
+  return texture(u_trail,fract(pos+vec2(cos(ang),sin(ang))/u_tr*u_sd)).r;
+}
+void main(){
+  vec4 ag=texture(u_agents,v_uv);
+  float x=ag.r,y=ag.g,a=ag.b;
+  float sF=sense(vec2(x,y),a);
+  float sL=sense(vec2(x,y),a+u_sa);
+  float sR=sense(vec2(x,y),a-u_sa);
+  float r=rnd(v_uv+fract(vec2(u_time*.07,u_time*.13)))-.5;
+  float turn=0.;
+  if(sF>=sL&&sF>=sR) turn=r*.08;
+  else if(sL>sR)      turn= u_sa*.5;
+  else if(sR>sL)      turn=-u_sa*.5;
+  else                turn= r*u_sa;
+  a+=turn;
+  frag=vec4(fract(x+cos(a)*u_speed/u_tr.x),fract(y+sin(a)*u_speed/u_tr.y),a,1.);
+}`;
+
+  // Deposit: vertex reads agent texture; each point = one agent on trail.
+  const VS_DEPOSIT = `#version 300 es
+precision highp float;
+in float a_idx;
+uniform sampler2D u_agents;
+uniform ivec2 u_asize;
+void main(){
+  int i=int(a_idx);
+  vec4 ag=texelFetch(u_agents,ivec2(i%u_asize.x,i/u_asize.x),0);
+  gl_Position=vec4(ag.r*2.-1.,ag.g*2.-1.,0.,1.);
+  gl_PointSize=2.;
+}`;
+
+  const FS_DEPOSIT = `#version 300 es
+precision highp float;
+uniform float u_dep;
+out vec4 frag;
+void main(){frag=vec4(u_dep,0.,0.,1.);}`;
+
+  // Diffuse + decay: 3×3 blur then multiply by decay.
+  const FS_DIFFUSE = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+uniform sampler2D u_trail;
+uniform vec2 u_tr;
+uniform float u_decay;
+out vec4 frag;
+void main(){
+  vec2 t=1./u_tr;float s=0.;
+  for(int dx=-1;dx<=1;dx++)
+    for(int dy=-1;dy<=1;dy++)
+      s+=texture(u_trail,v_uv+vec2(float(dx),float(dy))*t).r;
+  frag=vec4(max(s*(1./9.)*u_decay,0.),0.,0.,1.);
+}`;
+
+  // Display: map trail intensity through a two-stop colourmap.
+  const FS_DISPLAY = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+uniform sampler2D u_trail;
+uniform float u_bright;
+uniform vec3 u_cA;
+uniform vec3 u_cB;
+out vec4 frag;
+void main(){
+  float v=clamp(texture(u_trail,v_uv).r*u_bright,0.,1.);
+  frag=vec4(mix(u_cA,u_cB,v*v),1.);
+}`;
+
+  // Splat: gaussian blob written to trail (additive for attract, reverse for repel).
+  const FS_SPLAT = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+uniform vec2  u_pt;
+uniform float u_rad;
+uniform float u_str;
+out vec4 frag;
+void main(){
+  float d=length(v_uv-u_pt);
+  frag=vec4(exp(-d*d/(u_rad*u_rad*2.))*u_str,0.,0.,1.);
+}`;
+
+  // ── GL helpers ─────────────────────────────────────────────────────────
+  function sh(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+      console.error('Shader error:', gl.getShaderInfoLog(s));
+    return s;
+  }
+  function mkProg(vSrc, fSrc, a0) {
+    const vs = sh(gl.VERTEX_SHADER, vSrc), fs = sh(gl.FRAGMENT_SHADER, fSrc);
+    const p = gl.createProgram();
+    gl.attachShader(p, vs); gl.attachShader(p, fs);
+    if (a0) gl.bindAttribLocation(p, 0, a0);
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS))
+      console.error('Link error:', gl.getProgramInfoLog(p));
+    gl.deleteShader(vs); gl.deleteShader(fs);
+    const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS), u = {};
+    for (let i = 0; i < n; i++) {
+      const info = gl.getActiveUniform(p, i);
+      u[info.name] = gl.getUniformLocation(p, info.name);
+    }
+    return { p, u };
+  }
+  function mkFBO(w, h, iF, f, t) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, iF, w, h, 0, f, t, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { fbo, tex, w, h };
+  }
+  function mkDbl(w, h, iF, f, t) {
+    return { read: mkFBO(w, h, iF, f, t), write: mkFBO(w, h, iF, f, t) };
+  }
+  function delDbl(fb) {
+    if (!fb) return;
+    [fb.read, fb.write].forEach(b => { gl.deleteFramebuffer(b.fbo); gl.deleteTexture(b.tex); });
+  }
+  function swap(fb) { const t = fb.read; fb.read = fb.write; fb.write = t; }
+
+  function setQuad() {
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  }
+
+  // ── Resource builders ──────────────────────────────────────────────────
+  function buildAgentFBOs() {
+    delDbl(agentFBO);
+    agentFBO = mkDbl(agentTexW, agentTexH, gl.RGBA32F, gl.RGBA, gl.FLOAT);
+  }
+  function buildTrailFBOs() {
+    const base = { high:1280, med:1024, low:768 }[activeQuality()] || 1280;
+    const ar = W / Math.max(H, 1);
+    const res = ar >= 1
+      ? { w: Math.round(base), h: Math.round(base / ar) }
+      : { w: Math.round(base * ar), h: Math.round(base) };
+    trailW = res.w; trailH = res.h;
+    delDbl(trailFBO);
+    trailFBO = mkDbl(trailW, trailH, gl.R32F, gl.RED, gl.FLOAT);
+  }
+  function buildIndexBuf() {
+    const N = agentTexW * agentTexH, d = new Float32Array(N);
+    for (let i = 0; i < N; i++) d[i] = i;
+    if (!indexBuf) indexBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, indexBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, d, gl.DYNAMIC_DRAW);
+  }
+  function randomiseAgents() {
+    const N = agentTexW * agentTexH, d = new Float32Array(N * 4);
+    for (let i = 0; i < N; i++) {
+      d[i*4]   = Math.random();
+      d[i*4+1] = Math.random();
+      d[i*4+2] = Math.random() * Math.PI * 2;
+      d[i*4+3] = 1;
+    }
+    [agentFBO.read, agentFBO.write].forEach(b => {
+      gl.bindTexture(gl.TEXTURE_2D, b.tex);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, agentTexW, agentTexH, gl.RGBA, gl.FLOAT, d);
+    });
+  }
+  function clearTrail() {
+    [trailFBO.read, trailFBO.write].forEach(b => {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, b.fbo);
+      gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    });
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  // ── Public Anim object ─────────────────────────────────────────────────
+  return {
+    sectionLabel: 'Agent & Trail',
+
+    themes: {
+      mycelium: { label:'🍄 Mycelium', colors:[[0,1,.5],[.2,.9,.6],[0,.8,.4],[.1,1,.7],[.3,.8,.5]],  low:[0,.04,.02],  high:[0,1,.55]  },
+      neon:     { label:'⚡ Neon',     colors:[[1,0,.8],[0,1,.9],[.8,0,1],[0,.8,1],[1,.2,.5]],        low:[.04,0,.08],  high:[1,0,.85]  },
+      gold:     { label:'🌕 Gold',     colors:[[1,.6,0],[1,.8,.1],[1,.4,0],[.9,.7,0],[1,.9,.2]],      low:[.05,.02,0],  high:[1,.82,.1] },
+      biolum:   { label:'🌊 Biolum',   colors:[[0,.9,.7],[0,.6,1],[.1,1,.8],[0,.4,.8],[.2,.8,1]],     low:[0,.03,.05],  high:[.4,1,.9]  },
+      ember:    { label:'🔥 Ember',    colors:[[1,.2,0],[1,.5,0],[.9,.1,0],[1,.7,0],[1,.3,.05]],      low:[.05,0,0],    high:[1,.82,.1] },
+    },
+
+    defaults: {
+      theme:'mycelium', agentSpeed:.7, sensorAngle:45, sensorDist:9,
+      decayRate:.96, depositStr:5, trailBright:2, repel:false,
+    },
+
+    schema: [
+      { key:'agentSpeed',  label:'Speed',          min:.2,  max:2.5,  step:.1,   dp:1 },
+      { key:'sensorAngle', label:'Sensor angle',   min:10,  max:90,   step:5,    dp:0 },
+      { key:'sensorDist',  label:'Sensor reach',   min:2,   max:20,   step:1,    dp:0 },
+      { key:'decayRate',   label:'Trail decay',    min:.80, max:.999, step:.005, dp:3 },
+      { key:'depositStr',  label:'Trail strength', min:.5,  max:20,   step:.5,   dp:1 },
+      { key:'trailBright', label:'Brightness',     min:.3,  max:6,    step:.1,   dp:1 },
+      { key:'repel',       label:'Repel',          type:'toggle' },
+    ],
+
+    init(cv) {
+      if (!gl) {
+        gl = cv.getContext('webgl2', { alpha:false, antialias:false, depth:false, stencil:false });
+        if (!gl) {
+          document.body.innerHTML = '<p style="color:#f88;font:18px sans-serif;padding:2em">WebGL 2 is required for Slime Mould. Please use a modern browser.</p>';
+          return;
+        }
+        if (!gl.getExtension('EXT_color_buffer_float')) {
+          console.warn('EXT_color_buffer_float not available — float render targets may fail');
+        }
+      }
+      // Always rebuild programs and resources (handles context restore too)
+      pAgent   = mkProg(VS_QUAD,    FS_AGENT,   'a_pos');
+      pDeposit = mkProg(VS_DEPOSIT, FS_DEPOSIT, 'a_idx');
+      pDiffuse = mkProg(VS_QUAD,    FS_DIFFUSE, 'a_pos');
+      pDisplay = mkProg(VS_QUAD,    FS_DISPLAY, 'a_pos');
+      pSplat   = mkProg(VS_QUAD,    FS_SPLAT,   'a_pos');
+
+      quadBuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+      W = cv.width; H = cv.height;
+      const q = activeQuality();
+      [agentTexW, agentTexH] = ({ high:[512,512], med:[384,384], low:[256,256] })[q] || [512,512];
+      buildAgentFBOs();
+      buildIndexBuf();
+      buildTrailFBOs();
+      randomiseAgents();
+      clearTrail();
+    },
+
+    resize(w, h) {
+      W = w; H = h;
+      if (!gl || !trailFBO) return;
+      buildTrailFBOs();
+      clearTrail();
+    },
+
+    splat(x, y, dx, dy, color, opts) {
+      if (!gl || !trailFBO) return;
+      const P = pSplat;
+      gl.useProgram(P.p);
+      gl.uniform2f(P.u['u_pt'], x, y);
+      gl.uniform1f(P.u['u_rad'], 0.06);
+      gl.uniform1f(P.u['u_str'], SETTINGS.depositStr * 8);
+      gl.enable(gl.BLEND);
+      // Attract: add trail (agents naturally swarm to it).
+      // Repel: FUNC_REVERSE_SUBTRACT = dst − src = erases trail near finger.
+      gl.blendEquation(SETTINGS.repel ? gl.FUNC_REVERSE_SUBTRACT : gl.FUNC_ADD);
+      gl.blendFunc(gl.ONE, gl.ONE);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, trailFBO.read.fbo);
+      gl.viewport(0, 0, trailW, trailH);
+      setQuad();
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      gl.disable(gl.BLEND);
+      gl.blendEquation(gl.FUNC_ADD);
+    },
+
+    frame(dt) {
+      if (!gl || !agentFBO || !trailFBO) return;
+      const sa = SETTINGS.sensorAngle * Math.PI / 180;
+      const t  = performance.now() * 0.001 % 1000;
+
+      // 1 — Agent update: sense trail, turn, move → write new positions
+      {
+        const P = pAgent;
+        gl.useProgram(P.p);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, agentFBO.read.tex); gl.uniform1i(P.u['u_agents'], 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, trailFBO.read.tex); gl.uniform1i(P.u['u_trail'],  1);
+        gl.uniform1f(P.u['u_speed'], SETTINGS.agentSpeed);
+        gl.uniform1f(P.u['u_sa'],    sa);
+        gl.uniform1f(P.u['u_sd'],    SETTINGS.sensorDist);
+        gl.uniform2f(P.u['u_tr'],    trailW, trailH);
+        gl.uniform1f(P.u['u_time'],  t);
+        gl.disable(gl.BLEND);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, agentFBO.write.fbo);
+        gl.viewport(0, 0, agentTexW, agentTexH);
+        setQuad(); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        swap(agentFBO);
+      }
+
+      // 2 — Deposit: render each agent as a point onto the trail texture
+      {
+        const P = pDeposit;
+        gl.useProgram(P.p);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, agentFBO.read.tex); gl.uniform1i(P.u['u_agents'], 0);
+        gl.uniform2i(P.u['u_asize'], agentTexW, agentTexH);
+        gl.uniform1f(P.u['u_dep'],   SETTINGS.depositStr * 0.012);
+        gl.enable(gl.BLEND); gl.blendEquation(gl.FUNC_ADD); gl.blendFunc(gl.ONE, gl.ONE);
+        gl.bindBuffer(gl.ARRAY_BUFFER, indexBuf);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 1, gl.FLOAT, false, 0, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, trailFBO.read.fbo);
+        gl.viewport(0, 0, trailW, trailH);
+        gl.drawArrays(gl.POINTS, 0, agentTexW * agentTexH);
+        gl.disable(gl.BLEND);
+      }
+
+      // 3 — Diffuse + decay: 3×3 blur and multiply by decayRate
+      {
+        const P = pDiffuse;
+        gl.useProgram(P.p);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, trailFBO.read.tex); gl.uniform1i(P.u['u_trail'], 0);
+        gl.uniform2f(P.u['u_tr'],    trailW, trailH);
+        gl.uniform1f(P.u['u_decay'], SETTINGS.decayRate);
+        gl.disable(gl.BLEND);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, trailFBO.write.fbo);
+        gl.viewport(0, 0, trailW, trailH);
+        setQuad(); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        swap(trailFBO);
+      }
+
+      // 4 — Display: map trail intensity to theme colourmap
+      {
+        const th = this.themes[currentTheme];
+        const cL = th.low, cH = th.high;
+        const P = pDisplay;
+        gl.useProgram(P.p);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, trailFBO.read.tex); gl.uniform1i(P.u['u_trail'], 0);
+        gl.uniform1f(P.u['u_bright'], SETTINGS.trailBright);
+        gl.uniform3f(P.u['u_cA'], cL[0], cL[1], cL[2]);
+        gl.uniform3f(P.u['u_cB'], cH[0], cH[1], cH[2]);
+        gl.disable(gl.BLEND);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, W, H);
+        setQuad(); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+    },
+
+    reset() {
+      if (!gl || !agentFBO || !trailFBO) return;
+      clearTrail();
+      randomiseAgents();
+    },
+
+    setQuality(level) {
+      if (!gl) return;
+      [agentTexW, agentTexH] = ({ high:[512,512], med:[384,384], low:[256,256] })[level] || [512,512];
+      buildAgentFBOs();
+      buildIndexBuf();
+      randomiseAgents();
+    },
+  };
+})();
+/* ===== ANIMATION END ===== */
+
+boot();
+</script>
+</body>
+</html>
