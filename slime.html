@@ -497,7 +497,7 @@ function refreshBgRow(container){
 function buildPanel(){
   const app=document.getElementById('appSliders'); app.innerHTML='';
   const h=document.createElement('div'); h.className='sectn'; h.textContent=Anim.sectionLabel||'Controls'; app.appendChild(h);
-  (Anim.schema||[]).forEach(it=>app.appendChild(it.type==='toggle'?makeToggle(it.label,it.key):makeSlider(it)));
+  (Anim.schema||[]).forEach(it=>app.appendChild(it.type==='toggle'?makeToggle(it.label,it.key):it.type==='preset-chips'?makeChips(it.label,it.key,it.options):makeSlider(it)));
   app.appendChild(makeChips('Performance','quality',QUALITY,()=>{ if(SETTINGS.quality!=='auto') setPerf(SETTINGS.quality); }));
   app.appendChild(makeToggle('Show performance','showStats',applyStats));
   buildBgRow(document.getElementById('bgRow'));
@@ -695,7 +695,7 @@ uniform vec3 u_cB;
 out vec4 frag;
 void main(){
   float v=clamp(texture(u_trail,v_uv).r*u_bright,0.,1.);
-  frag=vec4(mix(u_cA,u_cB,v*v),1.);
+  frag=vec4(mix(u_cA,u_cB,sqrt(v)),1.);
 }`;
 
   // Splat: gaussian blob written to trail (additive for attract, reverse for repel).
@@ -809,9 +809,17 @@ void main(){
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
+  // ── Presets: each sets sensor/deposit/brightness as a package ────────────
+  const PRESETS = {
+    gossamer: { label:'Gossamer', sa:25, sd:4,  dep:1.5, bright:6   },
+    dense:    { label:'Dense',    sa:55, sd:12, dep:7,   bright:1.8 },
+    rivers:   { label:'Rivers',   sa:45, sd:16, dep:5,   bright:2.5 },
+    chaos:    { label:'Chaos',    sa:12, sd:3,  dep:3,   bright:3.5 },
+  };
+
   // ── Public Anim object ─────────────────────────────────────────────────
   return {
-    sectionLabel: 'Agent & Trail',
+    sectionLabel: 'Simulation',
 
     themes: {
       mycelium: { label:'🍄 Mycelium', colors:[[0,1,.5],[.2,.9,.6],[0,.8,.4],[.1,1,.7],[.3,.8,.5]],  low:[0,.04,.02],  high:[0,1,.55]  },
@@ -822,18 +830,17 @@ void main(){
     },
 
     defaults: {
-      theme:'mycelium', agentSpeed:.7, sensorAngle:45, sensorDist:9,
-      decayRate:.96, depositStr:5, trailBright:2, repel:false,
+      theme:'mycelium', preset:'dense', agentSpeed:1.0, decayRate:.96, repel:false,
     },
 
     schema: [
-      { key:'agentSpeed',  label:'Speed',          min:.2,  max:2.5,  step:.1,   dp:1 },
-      { key:'sensorAngle', label:'Sensor angle',   min:10,  max:90,   step:5,    dp:0 },
-      { key:'sensorDist',  label:'Sensor reach',   min:2,   max:20,   step:1,    dp:0 },
-      { key:'decayRate',   label:'Trail decay',    min:.80, max:.999, step:.005, dp:3 },
-      { key:'depositStr',  label:'Trail strength', min:.5,  max:20,   step:.5,   dp:1 },
-      { key:'trailBright', label:'Brightness',     min:.3,  max:6,    step:.1,   dp:1 },
-      { key:'repel',       label:'Repel',          type:'toggle' },
+      { type:'preset-chips', label:'Style', key:'preset', options:{
+        gossamer:{label:'Gossamer'}, dense:{label:'Dense'},
+        rivers:{label:'Rivers'},    chaos:{label:'Chaos'},
+      }},
+      { key:'agentSpeed', label:'Speed',       min:.2, max:2.5,  step:.1,   dp:1 },
+      { key:'decayRate',  label:'Persistence', min:.85, max:.999, step:.005, dp:3 },
+      { key:'repel',      label:'Repel',       type:'toggle' },
     ],
 
     init(cv) {
@@ -881,9 +888,10 @@ void main(){
       if (!gl || !trailFBO) return;
       const P = pSplat;
       gl.useProgram(P.p);
+      const pr = PRESETS[SETTINGS.preset] || PRESETS.dense;
       gl.uniform2f(P.u['u_pt'], x, y);
-      gl.uniform1f(P.u['u_rad'], 0.06);
-      gl.uniform1f(P.u['u_str'], SETTINGS.depositStr * 8);
+      gl.uniform1f(P.u['u_rad'], 0.018);
+      gl.uniform1f(P.u['u_str'], pr.dep * 1.5);
       gl.enable(gl.BLEND);
       // Attract: add trail (agents naturally swarm to it).
       // Repel: FUNC_REVERSE_SUBTRACT = dst − src = erases trail near finger.
@@ -899,7 +907,8 @@ void main(){
 
     frame(dt) {
       if (!gl || !agentFBO || !trailFBO) return;
-      const sa = SETTINGS.sensorAngle * Math.PI / 180;
+      const pr = PRESETS[SETTINGS.preset] || PRESETS.dense;
+      const sa = pr.sa * Math.PI / 180;
       const t  = performance.now() * 0.001 % 1000;
 
       // 1 — Agent update: sense trail, turn, move → write new positions
@@ -910,7 +919,7 @@ void main(){
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, trailFBO.read.tex); gl.uniform1i(P.u['u_trail'],  1);
         gl.uniform1f(P.u['u_speed'], SETTINGS.agentSpeed);
         gl.uniform1f(P.u['u_sa'],    sa);
-        gl.uniform1f(P.u['u_sd'],    SETTINGS.sensorDist);
+        gl.uniform1f(P.u['u_sd'],    pr.sd);
         gl.uniform2f(P.u['u_tr'],    trailW, trailH);
         gl.uniform1f(P.u['u_time'],  t);
         gl.disable(gl.BLEND);
@@ -926,7 +935,7 @@ void main(){
         gl.useProgram(P.p);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, agentFBO.read.tex); gl.uniform1i(P.u['u_agents'], 0);
         gl.uniform2i(P.u['u_asize'], agentTexW, agentTexH);
-        gl.uniform1f(P.u['u_dep'],   SETTINGS.depositStr * 0.012);
+        gl.uniform1f(P.u['u_dep'],   pr.dep * 0.012);
         gl.enable(gl.BLEND); gl.blendEquation(gl.FUNC_ADD); gl.blendFunc(gl.ONE, gl.ONE);
         gl.bindBuffer(gl.ARRAY_BUFFER, indexBuf);
         gl.enableVertexAttribArray(0);
@@ -958,7 +967,7 @@ void main(){
         const P = pDisplay;
         gl.useProgram(P.p);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, trailFBO.read.tex); gl.uniform1i(P.u['u_trail'], 0);
-        gl.uniform1f(P.u['u_bright'], SETTINGS.trailBright);
+        gl.uniform1f(P.u['u_bright'], pr.bright);
         gl.uniform3f(P.u['u_cA'], cL[0], cL[1], cL[2]);
         gl.uniform3f(P.u['u_cB'], cH[0], cH[1], cH[2]);
         gl.disable(gl.BLEND);

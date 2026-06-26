@@ -497,7 +497,7 @@ function refreshBgRow(container){
 function buildPanel(){
   const app=document.getElementById('appSliders'); app.innerHTML='';
   const h=document.createElement('div'); h.className='sectn'; h.textContent=Anim.sectionLabel||'Controls'; app.appendChild(h);
-  (Anim.schema||[]).forEach(it=>app.appendChild(it.type==='toggle'?makeToggle(it.label,it.key):makeSlider(it)));
+  (Anim.schema||[]).forEach(it=>app.appendChild(it.type==='toggle'?makeToggle(it.label,it.key):it.type==='preset-chips'?makeChips(it.label,it.key,it.options):makeSlider(it)));
   app.appendChild(makeChips('Performance','quality',QUALITY,()=>{ if(SETTINGS.quality!=='auto') setPerf(SETTINGS.quality); }));
   app.appendChild(makeToggle('Show performance','showStats',applyStats));
   buildBgRow(document.getElementById('bgRow'));
