@@ -718,6 +718,8 @@ uniform vec2  u_pt;
 uniform float u_hue;
 uniform float u_prob;
 uniform float u_time;
+uniform float u_aspect; // trailH/trailW — corrects oval to circle
+uniform float u_size;
 out vec4 frag;
 float rnd(vec2 p){p=fract(p*vec2(23.3,47.1));p+=dot(p,p+33.3);return fract(p.x*p.y);}
 void main(){
@@ -726,7 +728,7 @@ void main(){
     float r2=rnd(v_uv+fract(vec2(u_time*.17,u_time*.19)));
     float r3=rnd(v_uv+fract(vec2(u_time*.23,u_time*.29)));
     float angle=r2*6.2832;
-    vec2 pos=fract(u_pt+vec2(cos(angle),sin(angle))*r3*0.05);
+    vec2 pos=fract(u_pt+vec2(cos(angle)*u_aspect,sin(angle))*r3*u_size);
     frag=vec4(pos,angle,u_hue);
   } else {
     frag=ag;
@@ -738,12 +740,15 @@ void main(){
 precision highp float;
 in vec2 v_uv;
 uniform vec2  u_pt;
-uniform float u_rad;
 uniform float u_str;
+uniform float u_aspect; // trailH/trailW — corrects oval to circle
+uniform float u_size;
 out vec4 frag;
 void main(){
-  float d=length(v_uv-u_pt);
-  frag=vec4(exp(-d*d/(u_rad*u_rad*2.))*u_str,0.,0.,1.);
+  vec2 delta=v_uv-u_pt;
+  float d=length(vec2(delta.x/u_aspect,delta.y));
+  float sigma=u_size*0.5;
+  frag=vec4(exp(-d*d/(sigma*sigma*2.))*u_str,0.,0.,1.);
 }`;
 
   // ── GL helpers ─────────────────────────────────────────────────────────
@@ -828,10 +833,12 @@ void main(){
     const hMin = th.hueMin || 0, hRange = (th.hueMax || 1) - hMin;
     const N = agentTexW * agentTexH, d = new Float32Array(N * 4);
     for (let i = 0; i < N; i++) {
-      d[i*4]   = Math.random();
-      d[i*4+1] = Math.random();
+      const x = Math.random(), y = Math.random();
+      d[i*4]   = x;
+      d[i*4+1] = y;
       d[i*4+2] = Math.random() * Math.PI * 2;
-      d[i*4+3] = hMin + Math.random() * hRange;
+      // Hue follows x position so different screen regions start with different colours
+      d[i*4+3] = hMin + (x * hRange);
     }
     [agentFBO.read, agentFBO.write].forEach(b => {
       gl.bindTexture(gl.TEXTURE_2D, b.tex);
@@ -846,12 +853,12 @@ void main(){
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
-  // ── Presets: each sets sensor/deposit/brightness as a package ────────────
+  // ── Presets: each sets sensor/deposit/brightness/decay as a package ──────
   const PRESETS = {
-    gossamer: { label:'Gossamer', sa:25, sd:4,  dep:1.5, bright:6   },
-    dense:    { label:'Dense',    sa:55, sd:12, dep:7,   bright:1.8 },
-    rivers:   { label:'Rivers',   sa:45, sd:16, dep:5,   bright:2.5 },
-    chaos:    { label:'Chaos',    sa:12, sd:3,  dep:3,   bright:3.5 },
+    gossamer: { label:'Gossamer', sa:20, sd:3,  dep:0.6, bright:10,  decay:.88 },
+    dense:    { label:'Dense',    sa:55, sd:12, dep:7,   bright:1.8, decay:.97 },
+    rivers:   { label:'Rivers',   sa:40, sd:22, dep:4,   bright:2.8, decay:.985},
+    chaos:    { label:'Chaos',    sa:8,  sd:2,  dep:2,   bright:5,   decay:.93 },
   };
 
   // ── Public Anim object ─────────────────────────────────────────────────
@@ -867,7 +874,7 @@ void main(){
     },
 
     defaults: {
-      theme:'neon', preset:'dense', agentSpeed:1.0, decayRate:.96, repel:false,
+      theme:'neon', preset:'dense', agentSpeed:1.0, touchSize:0.05, repel:false,
     },
 
     schema: [
@@ -875,9 +882,9 @@ void main(){
         gossamer:{label:'Gossamer'}, dense:{label:'Dense'},
         rivers:{label:'Rivers'},    chaos:{label:'Chaos'},
       }},
-      { key:'agentSpeed', label:'Speed',       min:.2, max:2.5,  step:.1,   dp:1 },
-      { key:'decayRate',  label:'Persistence', min:.85, max:.999, step:.005, dp:3 },
-      { key:'repel',      label:'Repel',       type:'toggle' },
+      { key:'agentSpeed', label:'Speed',      min:.2,  max:2.5, step:.1,  dp:1 },
+      { key:'touchSize',  label:'Touch Size', min:.02, max:.12, step:.01, dp:2 },
+      { key:'repel',      label:'Repel',      type:'toggle' },
     ],
 
     init(cv) {
@@ -925,14 +932,17 @@ void main(){
 
     splat(x, y, dx, dy, color, opts) {
       if (!gl) return;
+      const sz = SETTINGS.touchSize || 0.05;
+      const aspect = trailH / Math.max(trailW, 1);
       if (SETTINGS.repel) {
         if (!trailFBO) return;
         const pr = PRESETS[SETTINGS.preset] || PRESETS.dense;
         const P = pRepel;
         gl.useProgram(P.p);
-        gl.uniform2f(P.u['u_pt'],  x, y);
-        gl.uniform1f(P.u['u_rad'], 0.025);
-        gl.uniform1f(P.u['u_str'], pr.dep * 2.0);
+        gl.uniform2f(P.u['u_pt'],     x, y);
+        gl.uniform1f(P.u['u_str'],    pr.dep * 2.0);
+        gl.uniform1f(P.u['u_aspect'], aspect);
+        gl.uniform1f(P.u['u_size'],   sz);
         gl.enable(gl.BLEND);
         gl.blendEquation(gl.FUNC_REVERSE_SUBTRACT);
         gl.blendFunc(gl.ONE, gl.ONE);
@@ -955,10 +965,12 @@ void main(){
         gl.useProgram(P.p);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, agentFBO.read.tex);
         gl.uniform1i(P.u['u_agents'], 0);
-        gl.uniform2f(P.u['u_pt'],   x, y);
-        gl.uniform1f(P.u['u_hue'],  hue);
-        gl.uniform1f(P.u['u_prob'], prob);
-        gl.uniform1f(P.u['u_time'], performance.now() * 0.001 % 1000);
+        gl.uniform2f(P.u['u_pt'],     x, y);
+        gl.uniform1f(P.u['u_hue'],    hue);
+        gl.uniform1f(P.u['u_prob'],   prob);
+        gl.uniform1f(P.u['u_time'],   performance.now() * 0.001 % 1000);
+        gl.uniform1f(P.u['u_aspect'], aspect);
+        gl.uniform1f(P.u['u_size'],   sz);
         gl.disable(gl.BLEND);
         gl.bindFramebuffer(gl.FRAMEBUFFER, agentFBO.write.fbo);
         gl.viewport(0, 0, agentTexW, agentTexH);
@@ -1020,7 +1032,7 @@ void main(){
         gl.useProgram(P.p);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, trailFBO.read.tex); gl.uniform1i(P.u['u_trail'], 0);
         gl.uniform2f(P.u['u_tr'],    trailW, trailH);
-        gl.uniform1f(P.u['u_decay'], SETTINGS.decayRate);
+        gl.uniform1f(P.u['u_decay'], pr.decay);
         gl.disable(gl.BLEND);
         gl.bindFramebuffer(gl.FRAMEBUFFER, trailFBO.write.fbo);
         gl.viewport(0, 0, trailW, trailH);
