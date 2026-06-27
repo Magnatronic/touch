@@ -17,7 +17,14 @@ network) that also runs offline from `file://`. Hosted on GitHub Pages.
 - **`sync-framework.js`** — `node sync-framework.js` copies the `FRAMEWORK-*` regions from
   `template.html` into every other `.html` (ANIMATION blocks untouched). Run it after any framework edit.
 - **`index.html`** — landing page; tiles auto-generated from an `ITEMS` array (`file:null` = "Soon").
-- **`slime.html`** — GPU Physarum slime mould. 5 themes (Mycelium/Neon/Gold/Biolum/Ember), Repel toggle, 7 schema sliders. WebGL2 ping-pong: agent update → deposit (GL_POINTS) → diffuse+decay → display. Touch seeds trail blobs that agents swarm toward (or flee in Repel mode).
+- **`slime.html`** — GPU Physarum slime mould. **Complete and tuned.** WebGL2 ping-pong: agent update → deposit (GL_POINTS) → diffuse+decay → display. Full overhaul done June 2026:
+  - Trail texture is RG32F (R=intensity, G=intensity×hue) for per-agent colour tracking; display shader recovers weighted-average hue and renders as HSL.
+  - Agents carry hue in .a channel; initialised by x-position for spatial colour variation across screen.
+  - Touch: **burst mode** teleports % of agents to touch point (20% tap, 0.8% drag) with touch colour hue — no Gaussian blob. Repel mode erases trail with circular Gaussian (FUNC_REVERSE_SUBTRACT). Both corrected for aspect ratio (circular, not oval).
+  - 4 Style presets (Gossamer/Dense/Rivers/Chaos) each bake sensor angle, sensor distance, deposit strength, brightness, and **decay rate** — giving genuinely distinct looks.
+  - Trail Width (1–4) controls both gl_PointSize AND diffuse blur amount (width=1 → no blur = hair-thin; width=4 → full 3×3 spread).
+  - Settings schema: Style chips · Speed · Trail Width · Brightness · Colour (sat mult) · Touch Rays (0=random, N=N discrete beams) · Touch Size · Repel toggle.
+  - Default: Gossamer, speed 1.5, trail width 1, brightness 2, 6 touch rays, touch size 0.04.
 - **`sensory_room_spec.md`** — trimmed spec (7 sections). Aurora/Galaxy/Ocean/Lava were removed from the plan.
 
 ### Architecture (important)
