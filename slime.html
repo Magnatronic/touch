@@ -656,12 +656,13 @@ precision highp float;
 in float a_idx;
 uniform sampler2D u_agents;
 uniform ivec2 u_asize;
+uniform float u_width;
 out float v_hue;
 void main(){
   int i=int(a_idx);
   vec4 ag=texelFetch(u_agents,ivec2(i%u_asize.x,i/u_asize.x),0);
   gl_Position=vec4(ag.r*2.-1.,ag.g*2.-1.,0.,1.);
-  gl_PointSize=2.;
+  gl_PointSize=u_width;
   v_hue=ag.a;
 }`;
 
@@ -721,13 +722,21 @@ uniform float u_time;
 uniform float u_aspect; // trailH/trailW — corrects oval to circle
 uniform float u_size;
 out vec4 frag;
+uniform int u_rays; // 0=random spread, N=N discrete rays
 float rnd(vec2 p){p=fract(p*vec2(23.3,47.1));p+=dot(p,p+33.3);return fract(p.x*p.y);}
 void main(){
   vec4 ag=texture(u_agents,v_uv);
   if(rnd(v_uv+fract(vec2(u_time*.07,u_time*.13)))<u_prob){
     float r2=rnd(v_uv+fract(vec2(u_time*.17,u_time*.19)));
     float r3=rnd(v_uv+fract(vec2(u_time*.23,u_time*.29)));
-    float angle=r2*6.2832;
+    float angle;
+    if(u_rays>0){
+      float ray=floor(r2*float(u_rays)+0.5);
+      angle=ray/float(u_rays)*6.2832;
+      angle+=(rnd(v_uv+fract(vec2(u_time*.31,u_time*.37)))-.5)*0.35;
+    } else {
+      angle=r2*6.2832;
+    }
     vec2 pos=fract(u_pt+vec2(cos(angle)*u_aspect,sin(angle))*r3*u_size);
     frag=vec4(pos,angle,u_hue);
   } else {
@@ -874,7 +883,8 @@ void main(){
     },
 
     defaults: {
-      theme:'neon', preset:'dense', agentSpeed:1.0, touchSize:0.05, repel:false,
+      theme:'neon', preset:'dense', agentSpeed:1.0, trailWidth:2,
+      brightness:1.0, satMult:1.0, burstRays:0, touchSize:0.05, repel:false,
     },
 
     schema: [
@@ -882,9 +892,13 @@ void main(){
         gossamer:{label:'Gossamer'}, dense:{label:'Dense'},
         rivers:{label:'Rivers'},    chaos:{label:'Chaos'},
       }},
-      { key:'agentSpeed', label:'Speed',      min:.2,  max:2.5, step:.1,  dp:1 },
-      { key:'touchSize',  label:'Touch Size', min:.02, max:.12, step:.01, dp:2 },
-      { key:'repel',      label:'Repel',      type:'toggle' },
+      { key:'agentSpeed',  label:'Speed',       min:.2,  max:2.5, step:.1,   dp:1 },
+      { key:'trailWidth',  label:'Trail Width',  min:1,   max:4,   step:1,    dp:0 },
+      { key:'brightness',  label:'Brightness',   min:.25, max:4,   step:.25,  dp:2 },
+      { key:'satMult',     label:'Colour',       min:0,   max:1,   step:.05,  dp:2 },
+      { key:'burstRays',   label:'Touch Rays',   min:0,   max:12,  step:1,    dp:0 },
+      { key:'touchSize',   label:'Touch Size',   min:.02, max:.12, step:.01,  dp:2 },
+      { key:'repel',       label:'Repel',        type:'toggle' },
     ],
 
     init(cv) {
@@ -971,6 +985,7 @@ void main(){
         gl.uniform1f(P.u['u_time'],   performance.now() * 0.001 % 1000);
         gl.uniform1f(P.u['u_aspect'], aspect);
         gl.uniform1f(P.u['u_size'],   sz);
+        gl.uniform1i(P.u['u_rays'],   Math.round(SETTINGS.burstRays) || 0);
         gl.disable(gl.BLEND);
         gl.bindFramebuffer(gl.FRAMEBUFFER, agentFBO.write.fbo);
         gl.viewport(0, 0, agentTexW, agentTexH);
@@ -1016,6 +1031,7 @@ void main(){
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, agentFBO.read.tex); gl.uniform1i(P.u['u_agents'], 0);
         gl.uniform2i(P.u['u_asize'], agentTexW, agentTexH);
         gl.uniform1f(P.u['u_dep'],   pr.dep * 0.012);
+        gl.uniform1f(P.u['u_width'], SETTINGS.trailWidth || 2);
         gl.enable(gl.BLEND); gl.blendEquation(gl.FUNC_ADD); gl.blendFunc(gl.ONE, gl.ONE);
         gl.bindBuffer(gl.ARRAY_BUFFER, indexBuf);
         gl.enableVertexAttribArray(0);
@@ -1046,9 +1062,9 @@ void main(){
         const P = pDisplay;
         gl.useProgram(P.p);
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, trailFBO.read.tex); gl.uniform1i(P.u['u_trail'], 0);
-        gl.uniform1f(P.u['u_bright'], pr.bright);
+        gl.uniform1f(P.u['u_bright'], pr.bright * (SETTINGS.brightness || 1.0));
         gl.uniform1f(P.u['u_lMax'],   th.lMax);
-        gl.uniform1f(P.u['u_sat'],    th.sat);
+        gl.uniform1f(P.u['u_sat'],    th.sat * (SETTINGS.satMult ?? 1.0));
         gl.disable(gl.BLEND);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.viewport(0, 0, W, H);
