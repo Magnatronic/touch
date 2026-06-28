@@ -179,8 +179,8 @@ function setPerf(level){ if(level===perfLevel) return; perfLevel=level; if(Anim.
 function autoPerf(fps){
   if(qCooldown>0){ qCooldown--; return; }
   const i=PERF_ORDER.indexOf(perfLevel);
-  if(fps<45 && i>0){ setPerf(PERF_ORDER[i-1]); qCooldown=2; }
-  else if(fps>58 && i<2){ setPerf(PERF_ORDER[i+1]); qCooldown=3; }
+  if(fps<42 && i>0){ setPerf(PERF_ORDER[i-1]); qCooldown=4; }
+  else if(fps>56 && i<2){ setPerf(PERF_ORDER[i+1]); qCooldown=8; }
 }
 function updateStats(fps){
   const el=document.getElementById('stats'); if(!el) return;
@@ -558,8 +558,9 @@ function setupGL(){
 function loop(){
   if(glLost){ requestAnimationFrame(loop); return; }
   sizeCanvas();
-  const now=Date.now(), dt=Math.min((now-lastTime)/1000,0.016); lastTime=now;
-  fpsAccum+=dt; fpsFrames++;
+  const now=Date.now(), rawDt=(now-lastTime)/1000; lastTime=now;
+  const dt=Math.min(rawDt,0.033);  // cap at ~30fps equivalent; prevents physics explosion without causing slow-motion
+  fpsAccum+=rawDt; fpsFrames++;    // use real elapsed time so FPS counter reflects actual frame rate
   if(fpsAccum>=1){ const fps=fpsFrames/fpsAccum; fpsAccum=0; fpsFrames=0;
     if(SETTINGS.quality==='auto') autoPerf(fps);
     if(SETTINGS.showStats) updateStats(fps); }

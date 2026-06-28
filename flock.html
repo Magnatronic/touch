@@ -179,8 +179,8 @@ function setPerf(level){ if(level===perfLevel) return; perfLevel=level; if(Anim.
 function autoPerf(fps){
   if(qCooldown>0){ qCooldown--; return; }
   const i=PERF_ORDER.indexOf(perfLevel);
-  if(fps<45 && i>0){ setPerf(PERF_ORDER[i-1]); qCooldown=2; }
-  else if(fps>58 && i<2){ setPerf(PERF_ORDER[i+1]); qCooldown=3; }
+  if(fps<42 && i>0){ setPerf(PERF_ORDER[i-1]); qCooldown=4; }
+  else if(fps>56 && i<2){ setPerf(PERF_ORDER[i+1]); qCooldown=8; }
 }
 function updateStats(fps){
   const el=document.getElementById('stats'); if(!el) return;
@@ -558,8 +558,9 @@ function setupGL(){
 function loop(){
   if(glLost){ requestAnimationFrame(loop); return; }
   sizeCanvas();
-  const now=Date.now(), dt=Math.min((now-lastTime)/1000,0.016); lastTime=now;
-  fpsAccum+=dt; fpsFrames++;
+  const now=Date.now(), rawDt=(now-lastTime)/1000; lastTime=now;
+  const dt=Math.min(rawDt,0.033);  // cap at ~30fps equivalent; prevents physics explosion without causing slow-motion
+  fpsAccum+=rawDt; fpsFrames++;    // use real elapsed time so FPS counter reflects actual frame rate
   if(fpsAccum>=1){ const fps=fpsFrames/fpsAccum; fpsAccum=0; fpsFrames=0;
     if(SETTINGS.quality==='auto') autoPerf(fps);
     if(SETTINGS.showStats) updateStats(fps); }
@@ -604,6 +605,7 @@ const Anim = (() => {
   let agents = [];
   let activeCount = 0;
   let _attractors = [];   // filled by splat(), drained at end of frame()
+  let _lastTheme = '';
 
   /* ── Physics radii (px at 1080p; spatial-hash cell matches COH_RADIUS) ── */
   const BASE_SPEED    = 150;   // px/s at theme.speed=1, SETTINGS.speed=1
@@ -623,7 +625,7 @@ const Anim = (() => {
       colors:[[0.4,0.6,1],[0.5,0.75,1],[0.3,0.5,0.9],[0.8,0.9,1],[0.45,0.65,1]],
       speed:1.8,  style:'streaks',
       sepW:1.3, cohW:0.9, alignW:1.6,
-      hueMin:0.56, hueMax:0.71, drift:0,
+      hueMin:0.50, hueMax:0.78, drift:0,
       sat:0.80, lit:0.62,
     },
     fireflies: {
@@ -631,7 +633,7 @@ const Anim = (() => {
       colors:[[1,0.7,0.1],[0.35,0.95,0.25],[1,0.5,0.05],[0.45,1,0.4],[1,0.8,0.2]],
       speed:0.55, style:'glow',
       sepW:0.8, cohW:0.4, alignW:0.65,
-      hueMin:0.09, hueMax:0.27, drift:0,
+      hueMin:0.06, hueMax:0.32, drift:0,
       sat:0.95, lit:0.65,
     },
     plasma: {
@@ -639,7 +641,7 @@ const Anim = (() => {
       colors:[[1,0.05,0.8],[0,1,0.9],[0.8,0.05,1],[0.05,0.8,1],[1,0.25,0.9]],
       speed:1.2,  style:'constellation',
       sepW:1.0, cohW:0.65, alignW:1.05,
-      hueMin:0.76, hueMax:0.95, drift:0,
+      hueMin:0.70, hueMax:1.00, drift:0,
       sat:1.0, lit:0.62,
     },
     embers: {
@@ -647,7 +649,7 @@ const Anim = (() => {
       colors:[[1,0.25,0],[1,0.5,0.08],[1,0.12,0],[0.92,0.4,0],[1,0.65,0.05]],
       speed:0.95, style:'sparks',
       sepW:0.5, cohW:0.3, alignW:0.7,
-      hueMin:0.0, hueMax:0.07, drift:-55,  // negative = upward (canvas y-down)
+      hueMin:0.0, hueMax:0.11, drift:-55,  // negative = upward (canvas y-down)
       sat:1.0, lit:0.58,
     },
     aurora: {
@@ -655,7 +657,7 @@ const Anim = (() => {
       colors:[[0.1,1,0.5],[0.65,0.1,1],[0.05,0.9,0.65],[0.8,0.25,1],[0.1,0.85,0.45]],
       speed:0.25, style:'blobs',
       sepW:0.55, cohW:0.45, alignW:0.4,
-      hueMin:0.27, hueMax:0.75, drift:0,
+      hueMin:0.20, hueMax:0.82, drift:0,
       sat:0.85, lit:0.55,
     },
   };
@@ -709,6 +711,13 @@ const Anim = (() => {
     return ((a+d*t)%1+1)%1;
   }
 
+  // Per-agent sat/lit offsets applied here — caps lit at 0.80 to prevent whitening on cluster
+  function agentColor(a, th, alpha, litBoost=0){
+    const s=Math.max(0.3, Math.min(1,   th.sat+(a.satOff||0)));
+    const l=Math.max(0.2, Math.min(0.80, th.lit+(a.litOff||0)+litBoost));
+    return hslStr(a.displayHue, s, l, alpha);
+  }
+
   /* ── Agent management ── */
   function spawnAgent(){
     const th = THEME_DATA[currentTheme] || THEME_DATA.murmuration;
@@ -719,6 +728,8 @@ const Anim = (() => {
       displayHue: hue, themeHue: hue,
       pulsePhase: Math.random()*TAU,
       jitterVx: (Math.random()-0.5)*30,  // embers horizontal bias (px/s²)
+      satOff: (Math.random()-0.5)*0.16,  // individual saturation variety
+      litOff: (Math.random()-0.5)*0.12,  // individual lightness variety
     };
   }
 
@@ -823,6 +834,7 @@ const Anim = (() => {
 
   /* ── Colour-claim ── */
   function updateColours(dt){
+    const th=THEME_DATA[currentTheme]||THEME_DATA.murmuration;
     const repel=SETTINGS.repel;
     for(let i=0; i<activeCount; i++){
       const a=agents[i];
@@ -836,6 +848,9 @@ const Anim = (() => {
           }
         }
       }
+      // Slow hue wander — keeps the flock visually alive within the theme's palette range
+      a.themeHue+=(Math.random()-0.5)*dt*0.06;
+      a.themeHue=Math.max(th.hueMin, Math.min(th.hueMax, a.themeHue));
       if(!claimed) a.displayHue=lerpHue(a.displayHue, a.themeHue, Math.min(1,dt*0.9));
     }
   }
@@ -860,7 +875,7 @@ const Anim = (() => {
       const a=agents[i];
       if(Math.hypot(a.vx,a.vy)<1) continue;
       const k=gs*0.05+0.01;
-      ctx.strokeStyle=hslStr(a.displayHue, th.sat, th.lit, 0.82);
+      ctx.strokeStyle=agentColor(a, th, 0.82);
       ctx.beginPath();
       ctx.moveTo(a.x-a.vx*k, a.y-a.vy*k);
       ctx.lineTo(a.x, a.y);
@@ -872,45 +887,73 @@ const Anim = (() => {
     if(!glowCtx) return;
     const gs=SETTINGS.glowSize!=null?SETTINGS.glowSize:4;
     const coreR=Math.max(1, gs*0.45);
-    const blurAmt=Math.max(2, gs*2.2)|0;
+    const blurAmt=Math.max(2, gs*1.2)|0;   // reduced: single-pass blurs all particles together so less blur keeps them distinct
     glowCtx.clearRect(0,0,W,H);
     for(let i=0; i<activeCount; i++){
       const a=agents[i];
       a.pulsePhase=(a.pulsePhase+dt*2.4)%TAU;
       const pulse=0.5+0.5*Math.sin(a.pulsePhase);
       const r=coreR*(0.5+0.5*pulse);
-      glowCtx.fillStyle=hslStr(a.displayHue, th.sat, th.lit, 0.65+0.35*pulse);
+      glowCtx.fillStyle=agentColor(a, th, 0.65+0.35*pulse);
       glowCtx.beginPath(); glowCtx.arc(a.x,a.y,r,0,TAU); glowCtx.fill();
     }
-    ctx.globalCompositeOperation='lighter';
+    ctx.globalCompositeOperation='screen';  // screen avoids blowing out to white when agents cluster
     ctx.filter=`blur(${blurAmt}px)`;
     ctx.drawImage(glowCanvas,0,0);
     ctx.filter='none';
-    ctx.globalCompositeOperation='source-over';
+    ctx.globalCompositeOperation='source-over';  // crisp cores use normal blend so they don't compound
+    for(let i=0; i<activeCount; i++){
+      const a=agents[i];
+      const pulse=0.5+0.5*Math.sin(a.pulsePhase);
+      ctx.fillStyle=agentColor(a, th, 0.65+0.2*pulse, 0.1);
+      ctx.beginPath(); ctx.arc(a.x,a.y,Math.max(0.8,coreR*0.4),0,TAU); ctx.fill();
+    }
   }
 
   function renderConstellation(th){
-    // Rebuild hash with post-physics positions
     buildHash();
     const gs=SETTINGS.glowSize!=null?SETTINGS.glowSize:4;
 
-    // Neighbour lines
-    ctx.lineWidth=0.9;
+    // Collect segments into 3 alpha tiers — 3 stroke() calls instead of one per line
+    const near4=[], mid4=[], far4=[];
+    const NEAR_D=LINE_THRESH*0.4, MID_D=LINE_THRESH*0.7;
+    const avgHue=(th.hueMin+th.hueMax)*0.5;
+
     for(let i=0; i<activeCount; i++){
       const a=agents[i];
-      const near=queryRange(a.x,a.y,LINE_THRESH);
-      for(const j of near){
-        if(j<=i) continue;
-        const b=agents[j];
-        const dx=b.x-a.x, dy=b.y-a.y;
-        const d=Math.sqrt(dx*dx+dy*dy);
-        if(d<LINE_THRESH){
-          const alpha=(1-d/LINE_THRESH)*0.48;
-          ctx.strokeStyle=hslStr(lerpHue(a.displayHue,b.displayHue,0.5), th.sat, th.lit, alpha);
-          ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+      // Inline hash traversal to avoid a new array allocation per agent
+      const x0=Math.floor((a.x-LINE_THRESH)/CELL), x1=Math.floor((a.x+LINE_THRESH)/CELL);
+      const y0=Math.floor((a.y-LINE_THRESH)/CELL), y1=Math.floor((a.y+LINE_THRESH)/CELL);
+      for(let cx=x0; cx<=x1; cx++){
+        for(let cy=y0; cy<=y1; cy++){
+          const cell=hashMap.get(hashKey(cx,cy));
+          if(!cell) continue;
+          for(const j of cell){
+            if(j<=i) continue;
+            const b=agents[j];
+            const dx=b.x-a.x, dy=b.y-a.y;
+            const d2=dx*dx+dy*dy;
+            if(d2>=LINE_THRESH*LINE_THRESH) continue;
+            const d=Math.sqrt(d2);
+            if(d<NEAR_D)     near4.push(a.x,a.y,b.x,b.y);
+            else if(d<MID_D) mid4.push(a.x,a.y,b.x,b.y);
+            else              far4.push(a.x,a.y,b.x,b.y);
+          }
         }
       }
     }
+
+    ctx.lineWidth=0.9;
+    const drawTier=(segs,alpha)=>{
+      if(!segs.length) return;
+      ctx.strokeStyle=hslStr(avgHue, th.sat, th.lit, alpha);
+      ctx.beginPath();
+      for(let k=0; k<segs.length; k+=4){ ctx.moveTo(segs[k],segs[k+1]); ctx.lineTo(segs[k+2],segs[k+3]); }
+      ctx.stroke();
+    };
+    drawTier(far4, 0.12);
+    drawTier(mid4, 0.26);
+    drawTier(near4, 0.44);
 
     // Node dots on top — single-pass blur via offscreen canvas
     const dotR=Math.max(1.5, gs*0.28);
@@ -918,10 +961,10 @@ const Anim = (() => {
       glowCtx.clearRect(0,0,W,H);
       for(let i=0; i<activeCount; i++){
         const a=agents[i];
-        glowCtx.fillStyle=hslStr(a.displayHue, th.sat, th.lit+0.1, 0.9);
+        glowCtx.fillStyle=agentColor(a, th, 0.9, 0.1);
         glowCtx.beginPath(); glowCtx.arc(a.x,a.y,dotR,0,TAU); glowCtx.fill();
       }
-      ctx.filter=`blur(${Math.max(1,gs*0.8)|0}px)`;
+      ctx.filter=`blur(${Math.max(1,gs*0.5)|0}px)`;
       ctx.drawImage(glowCanvas,0,0);
       ctx.filter='none';
     }
@@ -937,10 +980,10 @@ const Anim = (() => {
       const k=gs*0.045+0.015;
       // Faint tail
       ctx.lineWidth=0.9;
-      ctx.strokeStyle=hslStr(a.displayHue, th.sat, th.lit, 0.32);
+      ctx.strokeStyle=agentColor(a, th, 0.32);
       ctx.beginPath(); ctx.moveTo(a.x-a.vx*k, a.y-a.vy*k); ctx.lineTo(a.x,a.y); ctx.stroke();
       // Bright head
-      ctx.fillStyle=hslStr(a.displayHue, th.sat, th.lit+0.12, 0.92);
+      ctx.fillStyle=agentColor(a, th, 0.92, 0.12);
       ctx.beginPath(); ctx.arc(a.x,a.y,hr,0,TAU); ctx.fill();
     }
   }
@@ -949,14 +992,14 @@ const Anim = (() => {
     if(!glowCtx) return;
     const gs=SETTINGS.glowSize!=null?SETTINGS.glowSize:4;
     const coreR=Math.max(2, gs*0.65);
-    const blurAmt=Math.max(4, gs*3.5)|0;
+    const blurAmt=Math.max(4, gs*2.2)|0;   // reduced from gs*3.5 — was creating 42px blur at max glow size
     glowCtx.clearRect(0,0,W,H);
     for(let i=0; i<activeCount; i++){
       const a=agents[i];
-      glowCtx.fillStyle=hslStr(a.displayHue, th.sat, th.lit, 0.38);
+      glowCtx.fillStyle=agentColor(a, th, 0.50);  // slightly higher alpha than before to compensate for screen blend being dimmer than lighter
       glowCtx.beginPath(); glowCtx.arc(a.x,a.y,coreR,0,TAU); glowCtx.fill();
     }
-    ctx.globalCompositeOperation='lighter';
+    ctx.globalCompositeOperation='screen';
     ctx.filter=`blur(${blurAmt}px)`;
     ctx.drawImage(glowCanvas,0,0);
     ctx.filter='none';
@@ -973,7 +1016,7 @@ const Anim = (() => {
       theme:'murmuration',
       count:500, speed:1.0,
       cohesion:1.0, separation:1.0, alignment:1.0,
-      pull:1.0, trailLen:20, glowSize:4, repel:false,
+      pull:2.0, trailLen:20, glowSize:4, repel:false,
     },
 
     schema: [
@@ -982,7 +1025,7 @@ const Anim = (() => {
       {key:'cohesion',   label:'Cohesion',     min:0,   max:2,    step:0.05, dp:2},
       {key:'separation', label:'Separation',   min:0,   max:2,    step:0.05, dp:2},
       {key:'alignment',  label:'Alignment',    min:0,   max:2,    step:0.05, dp:2},
-      {key:'pull',       label:'Touch pull',   min:0,   max:3,    step:0.05, dp:2},
+      {key:'pull',       label:'Touch pull',   min:1,   max:8,    step:0.1,  dp:1},
       {key:'trailLen',   label:'Trail length', min:0,   max:60,   step:1,    dp:0},
       {key:'glowSize',   label:'Glow size',    min:1,   max:12,   step:0.5,  dp:1},
       {key:'repel',      label:'Repel',        type:'toggle'},
@@ -1021,6 +1064,14 @@ const Anim = (() => {
       if(activeCount!==ceiling) resizePool(ceiling);
 
       const th=THEME_DATA[currentTheme]||THEME_DATA.murmuration;
+
+      // When theme changes, retarget all agent hues so updateColours lerps them to the new palette
+      if(currentTheme!==_lastTheme){
+        _lastTheme=currentTheme;
+        for(let i=0; i<agents.length; i++)
+          agents[i].themeHue=th.hueMin+Math.random()*(th.hueMax-th.hueMin);
+      }
+
       updateAgents(dt,th);
       updateColours(dt);
       fadeCanvas();
