@@ -600,6 +600,7 @@ function boot(){
 const Anim = (() => {
   /* ── Private state ── */
   let ctx = null, W = 1, H = 1;
+  let glowCanvas = null, glowCtx = null;   // offscreen canvas for single-pass blur
   let agents = [];
   let activeCount = 0;
   let _attractors = [];   // filled by splat(), drained at end of frame()
@@ -868,19 +869,23 @@ const Anim = (() => {
   }
 
   function renderGlow(dt, th){
+    if(!glowCtx) return;
     const gs=SETTINGS.glowSize!=null?SETTINGS.glowSize:4;
-    ctx.globalCompositeOperation='lighter';
+    const coreR=Math.max(1, gs*0.45);
+    const blurAmt=Math.max(2, gs*2.2)|0;
+    glowCtx.clearRect(0,0,W,H);
     for(let i=0; i<activeCount; i++){
       const a=agents[i];
       a.pulsePhase=(a.pulsePhase+dt*2.4)%TAU;
       const pulse=0.5+0.5*Math.sin(a.pulsePhase);
-      const r=gs*(0.38+0.62*pulse);
-      ctx.shadowBlur=gs*(1.8+pulse*2.5);
-      ctx.shadowColor=hslStr(a.displayHue, th.sat, th.lit+0.1, 1);
-      ctx.fillStyle  =hslStr(a.displayHue, th.sat, th.lit,     0.45+0.55*pulse);
-      ctx.beginPath(); ctx.arc(a.x,a.y,r,0,TAU); ctx.fill();
+      const r=coreR*(0.5+0.5*pulse);
+      glowCtx.fillStyle=hslStr(a.displayHue, th.sat, th.lit, 0.65+0.35*pulse);
+      glowCtx.beginPath(); glowCtx.arc(a.x,a.y,r,0,TAU); glowCtx.fill();
     }
-    ctx.shadowBlur=0;
+    ctx.globalCompositeOperation='lighter';
+    ctx.filter=`blur(${blurAmt}px)`;
+    ctx.drawImage(glowCanvas,0,0);
+    ctx.filter='none';
     ctx.globalCompositeOperation='source-over';
   }
 
@@ -907,16 +912,19 @@ const Anim = (() => {
       }
     }
 
-    // Node dots on top
+    // Node dots on top — single-pass blur via offscreen canvas
     const dotR=Math.max(1.5, gs*0.28);
-    ctx.shadowBlur=gs*1.6;
-    for(let i=0; i<activeCount; i++){
-      const a=agents[i];
-      ctx.shadowColor=hslStr(a.displayHue, th.sat, th.lit, 1);
-      ctx.fillStyle  =hslStr(a.displayHue, th.sat, th.lit+0.1, 0.9);
-      ctx.beginPath(); ctx.arc(a.x,a.y,dotR,0,TAU); ctx.fill();
+    if(glowCtx){
+      glowCtx.clearRect(0,0,W,H);
+      for(let i=0; i<activeCount; i++){
+        const a=agents[i];
+        glowCtx.fillStyle=hslStr(a.displayHue, th.sat, th.lit+0.1, 0.9);
+        glowCtx.beginPath(); glowCtx.arc(a.x,a.y,dotR,0,TAU); glowCtx.fill();
+      }
+      ctx.filter=`blur(${Math.max(1,gs*0.8)|0}px)`;
+      ctx.drawImage(glowCanvas,0,0);
+      ctx.filter='none';
     }
-    ctx.shadowBlur=0;
   }
 
   function renderSparks(th){
@@ -938,17 +946,20 @@ const Anim = (() => {
   }
 
   function renderBlobs(th){
+    if(!glowCtx) return;
     const gs=SETTINGS.glowSize!=null?SETTINGS.glowSize:4;
-    const bR=gs*1.4;
-    ctx.globalCompositeOperation='lighter';
+    const coreR=Math.max(2, gs*0.65);
+    const blurAmt=Math.max(4, gs*3.5)|0;
+    glowCtx.clearRect(0,0,W,H);
     for(let i=0; i<activeCount; i++){
       const a=agents[i];
-      ctx.shadowBlur =bR*3.8;
-      ctx.shadowColor=hslStr(a.displayHue, th.sat, th.lit,     1);
-      ctx.fillStyle  =hslStr(a.displayHue, th.sat, th.lit-0.06, 0.26);
-      ctx.beginPath(); ctx.arc(a.x,a.y,bR,0,TAU); ctx.fill();
+      glowCtx.fillStyle=hslStr(a.displayHue, th.sat, th.lit, 0.38);
+      glowCtx.beginPath(); glowCtx.arc(a.x,a.y,coreR,0,TAU); glowCtx.fill();
     }
-    ctx.shadowBlur=0;
+    ctx.globalCompositeOperation='lighter';
+    ctx.filter=`blur(${blurAmt}px)`;
+    ctx.drawImage(glowCanvas,0,0);
+    ctx.filter='none';
     ctx.globalCompositeOperation='source-over';
   }
 
@@ -980,6 +991,9 @@ const Anim = (() => {
     init(cv){
       ctx=cv.getContext('2d',{alpha:false});
       W=cv.width; H=cv.height;
+      glowCanvas=document.createElement('canvas');
+      glowCanvas.width=W; glowCanvas.height=H;
+      glowCtx=glowCanvas.getContext('2d',{alpha:true});
       const q=activeQuality();
       const base=SETTINGS.count||500;
       const n={high:base, med:Math.round(base*0.6), low:Math.round(base*0.35)}[q]||base;
@@ -989,6 +1003,7 @@ const Anim = (() => {
     resize(w,h){
       const sx=w/(W||w), sy=h/(H||h);
       W=w; H=h;
+      if(glowCanvas){ glowCanvas.width=w; glowCanvas.height=h; }
       for(let i=0; i<agents.length; i++){ agents[i].x*=sx; agents[i].y*=sy; }
     },
 
