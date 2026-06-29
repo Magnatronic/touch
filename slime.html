@@ -940,11 +940,19 @@ void main(){
       gold:     { label:'🌕 Gold',     colors:[[1,.6,0],[1,.8,.1],[1,.4,0],[.9,.7,0],[1,.9,.2]],    hueMin:.08,hueMax:.17, lMax:.65, sat:.9  },
       biolum:   { label:'🌊 Biolum',   colors:[[0,.9,.7],[0,.6,1],[.1,1,.8],[0,.4,.8],[.2,.8,1]],   hueMin:.50,hueMax:.65, lMax:.65, sat:.85 },
       ember:    { label:'🔥 Ember',    colors:[[1,.2,0],[1,.5,0],[.9,.1,0],[1,.7,0],[1,.3,.05]],    hueMin:0,  hueMax:.12, lMax:.65, sat:.95 },
+      prism:    { label:'🌈 Prism',    colors:[[1,0,.2],[1,.6,0],[.2,1,.2],[0,.8,1],[.7,.2,1]],   hueMin:0,  hueMax:1.0, lMax:.75, sat:1.0  },
     },
 
     defaults: {
       theme:'neon', preset:'gossamer', agentSpeed:1.5, trailWidth:1,
       brightness:2.0, satMult:1.0, burstRays:6, touchSize:0.04, repel:false,
+    },
+
+    styles: {
+      gossamer: { label:'Gossamer', preset:'gossamer' },
+      dense:    { label:'Dense',    preset:'dense'    },
+      rivers:   { label:'Rivers',   preset:'rivers'   },
+      chaos:    { label:'Chaos',    preset:'chaos'    },
     },
 
     schema: [
