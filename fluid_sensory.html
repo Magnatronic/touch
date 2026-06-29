@@ -823,7 +823,7 @@ const Anim = (function(){
       acquireExt(); setFormats(); buildPrograms(); buildQuad(); initFBOs();
     },
     resize(w,h){ if(gl){ const d=getRes(dyeRes()); if(d.w!==dyeW||d.h!==dyeH) initFBOs(); } },
-    setQuality(level){ qLevel=level; if(gl) initFBOs(); },
+    setQuality(level){ qLevel=level; },
     splat(x,y,dx,dy,color,opts){
       opts=opts||{};
       const velScale=opts.velScale!==undefined?opts.velScale:1;
