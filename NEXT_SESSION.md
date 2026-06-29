@@ -12,20 +12,13 @@ network) that also runs offline from `file://`. Hosted on GitHub Pages.
 - Local: `C:\Local Docs\Sensory\Interactive`
 
 ## Current state (done)
-- **`fluid_sensory.html`** — GPU Navier–Stokes fluid. Complete and tuned. Refactored onto the framework.
-- **`template.html`** — canonical framework + a minimal Canvas2D placeholder animation.
-- **`sync-framework.js`** — `node sync-framework.js` copies the `FRAMEWORK-*` regions from
-  `template.html` into every other `.html` (ANIMATION blocks untouched). Run it after any framework edit.
-- **`index.html`** — landing page; tiles auto-generated from an `ITEMS` array (`file:null` = "Soon").
-- **`slime.html`** — GPU Physarum slime mould. **Complete and tuned.** WebGL2 ping-pong: agent update → deposit (GL_POINTS) → diffuse+decay → display. Full overhaul done June 2026:
-  - Trail texture is RG32F (R=intensity, G=intensity×hue) for per-agent colour tracking; display shader recovers weighted-average hue and renders as HSL.
-  - Agents carry hue in .a channel; initialised by x-position for spatial colour variation across screen.
-  - Touch: **burst mode** teleports % of agents to touch point (20% tap, 0.8% drag) with touch colour hue — no Gaussian blob. Repel mode erases trail with circular Gaussian (FUNC_REVERSE_SUBTRACT). Both corrected for aspect ratio (circular, not oval).
-  - 4 Style presets (Gossamer/Dense/Rivers/Chaos) each bake sensor angle, sensor distance, deposit strength, brightness, and **decay rate** — giving genuinely distinct looks.
-  - Trail Width (1–4) controls both gl_PointSize AND diffuse blur amount (width=1 → no blur = hair-thin; width=4 → full 3×3 spread).
-  - Settings schema: Style chips · Speed · Trail Width · Brightness · Colour (sat mult) · Touch Rays (0=random, N=N discrete beams) · Touch Size · Repel toggle.
-  - Default: Gossamer, speed 1.5, trail width 1, brightness 2, 6 touch rays, touch size 0.04.
-- **`sensory_room_spec.md`** — trimmed spec (7 sections). Aurora/Galaxy/Ocean/Lava were removed from the plan.
+- **`fluid_sensory.html`** — GPU Navier–Stokes fluid. Complete and tuned.
+- **`slime.html`** — GPU Physarum slime mould. Complete and tuned. Has 4 Style presets (Gossamer/Dense/Rivers/Chaos).
+- **`flock.html`** — CPU boids swarm. Complete. 5 themes (Murmuration/Fireflies/Plasma/Embers/Aurora). NOTE: flock themes currently bundle colour + physics + render style together — needs splitting into colour-only themes + Style presets in a future pass (see UI redesign below).
+- **`life.html`** — Conway's Game of Life. Complete. 6 themes, touch painting, birth notes, smooth fade transitions, 3 colour modes (Touch/Position/Mixed — Mixed now correctly inherits parent colours then drifts to position colour over ~80 generations).
+- **`template.html`** — canonical framework + minimal placeholder animation.
+- **`sync-framework.js`** — copies FRAMEWORK-* regions from template.html into every other .html. Run after any framework edit.
+- **`index.html`** — landing page with Live/Soon tiles.
 
 ### Architecture (important)
 Every animation = **FRAMEWORK** (shared, identical, marked `FRAMEWORK-CSS/HTML/JS START…END`)
@@ -35,125 +28,216 @@ const Anim = { sectionLabel, themes, defaults, schema,
   init(canvas), resize(w,h), splat(x,y,dx,dy,color,opts), frame(dt), reset() };
 ```
 - `splat` coords are normalised 0..1, **y points up**.
-- Framework already provides: settings + localStorage, colour system (themes + swatches + lock +
-  background), full audio engine (9 voices, 4 scales, reverb/echo/chorus, master limiter),
-  5-touch input with pointer pruning, the ≡ menu → Appearance/Sound tabs panel, DPR sizing,
-  WebGL context-loss recovery, the render loop (calls `Anim.splat` per touch sample, then `Anim.frame(dt)`).
+- Framework provides: settings + localStorage, colour system (themes + swatches + lock + background), full audio engine (9 voices, 4 scales, reverb/echo/chorus, master limiter), 5-touch input with pointer pruning, the ≡ menu panel, DPR sizing, WebGL context-loss recovery, render loop.
 - Edit framework ONLY in `template.html`, then `node sync-framework.js`.
 
-## NEXT TASK: build `flock.html` (abstract steering swarm)
-Boids (separation/alignment/cohesion + wander + per-finger seek/flee). **CPU + Canvas2D first**
-(spatial-hash neighbours), GPU version possible later.
+---
 
-Locked design decisions:
-- **Per-theme forms** — each theme changes palette + motion + agent shape:
-  - Murmuration — cool blue/white, fast/tight, **velocity streaks**
-  - Fireflies — warm amber/green, slow/loose/pulsing, **glow dots**
-  - Plasma — magenta/cyan neon, medium/spiky, **constellation** (neighbour lines)
-  - Embers — orange/red, upward drift + flicker, **sparks**
-  - Aurora — green/violet, very slow, **soft blobs** + long trails
-- **Touch:** attract by default + **Repel toggle**.
-- **Colour-claim:** agents tint toward the colour of the finger they follow; drift back to theme when released.
-- **Trails:** soft fade, with a length slider.
-- **Settings schema:** Agent count (~500 default, 100–1500) · Speed · Cohesion · Separation ·
-  Alignment · Touch pull · Trail length · Glow size · **Repel** toggle.
-- Audio: reuse the framework's per-touch tonal engine as-is.
+## NEXT TASK: Framework UI redesign + Style presets + Prism theme
 
-### Framework features now available (done — use them in flock)
-- **Schema toggles**: schema items support `{type:'toggle', key, label}` (renders a switch). Use this
-  for flock's **Repel** toggle. (Already used by fluid's "Pixelated edges".)
-- **Quality system**: a `Performance` chip group (Auto/High/Medium/Low) lives in every Appearance
-  pane. The framework monitors FPS and (in Auto) sets `perfLevel` = high/med/low; it also caps
-  per-finger sub-splats by level (10/6/4). An animation can read `activeQuality()` and implement
-  `Anim.setQuality(level)` to scale its own cost. **Flock should implement `setQuality` to scale
-  agent count** (e.g. high≈full count, med≈0.6×, low≈0.35×) so it auto-throttles on weak hardware.
+This is a framework-level change — edit `template.html`, run `node sync-framework.js`,
+then add animation-specific `styles` and `prism` theme to each animation's ANIMATION block.
 
-### Rollout checklist for flock
-1. Copy `template.html` → `flock.html`, replace ANIMATION block.
-2. Implement boids + spatial hash + per-theme render styles + colour-claim + trails;
-   add `setQuality(level)` to scale agent count; Repel via a schema toggle.
-3. `index.html`: set the Flock tile's `file:` to `flock.html` (tile already added, currently Soon).
-5. Syntax-check, test in preview (5 touches, themes, repel, reset), commit + push.
+### 1. New UI interaction model
 
-## Remaining roadmap (after flock)
-gravity_sand · kaleidoscope · sound_visualiser · bubble_wrap · lightning · shatter.
+**Current:** ≡ → [✨ Appearance] [🔊 Sound] → scrolling panel
 
-## Candidate animation ideas (CS algorithms — not committed, no build order)
-Captured brainstorm. Most are GPU ping-pong shader sims like fluid_sensory (reuse that pattern:
-splat() seeds the field, frame() steps + renders, themes = colour map + rule preset). Slime mould
-is an agent system like flock.
+**New:** ≡ → two rows:
+- **Quick row** (top): context-sensitive chips that change based on which bottom button is active
+- **Bottom row**: [🎨 Theme] [✨ Style] [🎨 Colour] [🎛️ Controls] [🔊 Sound] [🧹]
 
-Strong recommends:
-- **Reaction–Diffusion (Gray–Scott)** — two diffusing "chemicals" → organic spots/stripes/coral
-  (Turing patterns) that grow from touch. Calm, hypnotic. GPU.
-- **Lenia / SmoothLife** — continuous (floating-point) Game of Life: soft lifelike organisms that
-  glide/pulse/divide; touch seeds life. The "beautiful Game of Life." GPU. (Classic binary GoL is a
-  weak sensory fit — flickery, dies out; if ever done, use slow tick + colour-by-age + touch reseed.)
-- **Slime mould (Physarum)** — thousands of agents lay/follow trails → glowing branching networks
-  that rewire around your touch. Showstopper, alive when idle. Agent sim (GPU or CPU).
+```
+[idle, faded]     ≡
 
-Also good:
-- **Cyclic cellular automata** — self-organising spiral waves; touch seeds spirals. GPU.
-- **Wave / ripple sim (2D wave equation)** — still pond; touches send interfering ripples. Very
-  calming, instant cause-and-effect, great with 5 fingers. GPU/cheap.
-- **Diffusion-Limited Aggregation (DLA)** — crystals/coral grow outward from each touch point.
-- **Cymatics / Chladni patterns** — sound frequency → standing-wave patterns; pairs with the audio
-  engine (touch height = frequency). Cross-over with the sound side.
-- **Flow-field particles (Perlin noise)** — calm particle streams along a field touch warps. Sibling
-  of flock — probably pick one, not both.
+[≡ tapped]
+  💎 Crystal  🪸 Coral  🔥 Ember ...         ← quick row (Theme mode by default)
+  [Theme] [Style] [Colour] [Controls] [Sound] [🧹]
+```
 
-## DEFERRED idea: alternative input devices (accessibility) — framework-level
-Discussed, not started. **Do this after the animations exist** (framework enhancement → every
-animation benefits at once; sits alongside/just before the lighting layer). Audience: students with
-physical + learning disabilities. Principle: support a few standard browser inputs, since most
-accessibility hardware emulates keyboard/mouse/gamepad.
+### 2. Quick row states (context-sensitive)
 
-Add input adapters that feed the EXISTING input pipeline (onDown/onMove/onUp → Anim.splat); no
-per-animation work needed. Priority order:
-1. **Keyboard + switches** (biggest win, tiny effort). Big-button switches/switch interfaces emulate
-   keys (space/enter) or mouse clicks. Add a **scanning / auto-move mode**: a cursor/attractor drifts
-   automatically and a switch press fires an effect at its position → true single-switch access.
-2. **Gamepad API** — Xbox controller AND the **Xbox Adaptive Controller** (XAC presents as a standard
-   gamepad + has 3.5mm jacks for external switches/joysticks, so this covers a lot). Stick → virtual
-   pointer/attractor; buttons → taps/bursts. Easy, no deps.
-3. **Webcam motion** (getUserMedia + cheap frame-difference) — contactless; motion centroids become
-   virtual pointers. NOTE: avoid ML pose/hand tracking (needs a model file → breaks offline/no-deps).
-4. **Microphone** — already covered by the planned `sound_visualiser`.
-5. **Web MIDI** — optional; adaptive music devices / big-pad controllers (SEN music rooms).
-6. Eye-gaze / accessibility joysticks usually emulate a mouse pointer + dwell-click → covered by mouse
-   support + keeping targets large/forgiving.
+| Bottom button tapped | Quick row shows | Panel opens? |
+|---|---|---|
+| **Theme** (default) | Theme chips for current animation | No |
+| **Style** | Style preset chips for current animation | No |
+| **Colour** | ↻ Auto · colour swatches · 🎨 picker · ┊ · bg 🎨 | No |
+| **Controls** | (nothing in quick row) | Yes — Controls panel |
+| **Sound** | (nothing in quick row) | Yes — Sound panel |
+| **🧹** | — | No — direct clear action |
 
-All browser-native, dependency-free, offline-friendly. Implement as framework input adapters so
-keyboard/switch/gamepad/webcam all flow through the same pointer pipeline.
+- Tapping the active bottom button again deactivates it (collapses quick row / closes panel).
+- Active button is visually highlighted.
+- 🧹 is always a direct action — never opens a panel.
 
-## DEFERRED idea: room lighting that mirrors on-screen colour (DMX / WLED / Philips Hue)
-Discussed, not started. **Do this only AFTER all the touch animations are built and working** —
-it's the final layer, not to be interleaved with the animation work. Goal: room lights match the
-dominant on-screen colour.
+### 3. Controls panel contents (replaces Appearance panel)
+All existing settings preserved — just reorganised:
+- Section header = Anim.sectionLabel
+- All Anim.schema items (sliders, toggles, preset-chips) — unchanged
+- Performance chips (Auto/High/Medium/Low)
+- Show performance stats toggle
+- ↺ Reset settings button (moved from panel footer to here)
 
-Key constraint: a sandboxed browser page can't drive DMX/UDP and is blocked (mixed-content,
-self-signed cert, CORS) from reaching LAN lights directly. So:
-- **WLED** — easy; takes RGB. JSON API (throttle ~5–10/s) or UDP realtime DRGB (smooth, needs a relay).
-- **Philips Hue** — needs a local relay: CLIP v2 API is HTTPS self-signed + app key + ~10 cmds/s
-  (too slow/awkward for the browser); the smooth path is the **Entertainment API over DTLS/UDP ~50Hz**,
-  impossible from a page. Hue wants CIE **xy + brightness** (RGB→xy with per-lamp gamut clamp).
-- **DMX** — USB-serial (Enttec) via Web Serial, or Art-Net/sACN over UDP (relay).
+### 4. Sound panel contents (unchanged)
+Voice chips · Scale chips · Reverb/Echo/Chorus/Mute toggles · Volume slider
 
-**Recommended architecture:** a small **`bridge/` Node app on the room PC** that serves the pages
-over http://localhost (avoids mixed-content/CORS) and fans one "current colour" out to WLED (UDP),
-Hue (Entertainment/DTLS + RGB→xy), and optionally DMX. Plus a tiny **optional framework hook** that
-emits a representative colour ~15Hz (average of active touch colours, fading to theme/dim when idle;
-or 1×1 canvas downsample). If no bridge is configured/reachable it silently no-ops, so pages stay
-standalone and still open from USB.
+### 5. Colour quick row detail
+```
+↻  🔴  🟠  🟡  🟢  🔵  🟣  ⚪  🎨  ┊  bg:🎨
+```
+- ↻ Auto = cycle theme palette (existing behaviour)
+- 8 standard colour swatches: red, orange, yellow, green, cyan, blue, purple, white
+- 🎨 = touch colour custom picker (existing)
+- ┊ = thin divider
+- bg:🎨 = background colour picker (single picker, no presets — background rarely changes)
+- Selecting any swatch locks that colour (existing lockColour behaviour)
 
-One-time setup later: WLED device IPs/segments; Hue link-button app key + an Entertainment area.
+### 6. Framework changes needed (template.html)
 
-Honest caveat: this feature inherently needs the bridge (or Web Serial hardware) — the animations
-stay self-contained; lighting is an opt-in layer on top.
+**New Anim contract field (optional):**
+```js
+styles: {
+  ink:   { label: 'Ink',   /* keys matching SETTINGS keys and their preset values */ },
+  smoke: { label: 'Smoke', ... },
+}
+```
+When Style is tapped in the bottom row, quick row shows chips built from `Anim.styles`.
+Tapping a style chip merges its values into SETTINGS and calls saveSettings().
+If `Anim.styles` is absent, Style button is hidden/disabled.
+
+**CSS additions needed:**
+- Two-row bar layout when open
+- Active state for bottom row buttons
+- Standard colour swatch row styling
+
+**JS additions needed:**
+- `currentQuickMode` state ('theme'|'style'|'colour'|null)
+- `showQuickMode(mode)` — renders correct quick row content
+- Style chip builder from `Anim.styles`
+- Standard colour row builder (8 fixed colours + custom picker + bg picker)
+- Theme quick row builder (same chips as current themeRow but in the bar)
+- Wire bottom row buttons to showQuickMode()
+- 🧹 direct action wired in bar (not panel footer)
+
+**Remove from framework:**
+- The `#panel` Appearance pane (themeRow, colourGroup, appSliders, bgRow move out of panel)
+- The ✨ Appearance cat button
+- panelBtns div (Clear canvas moves to bar; Reset moves to Controls panel)
+
+**Keep in framework:**
+- Sound panel — entirely unchanged
+- All existing JS functions: buildThemeButtons, buildSwatches, refreshColourUI, lockColour,
+  buildBgRow, makeSlider, makeToggle, makeChips, pickColor, etc.
+
+### 7. Style presets per animation
+
+#### fluid_sensory.html
+Add to Anim object:
+```js
+styles: {
+  ink:   { label:'Ink',   brushSize:0.08, intensity:2000,  persistence:0.85 },
+  smoke: { label:'Smoke', brushSize:0.12, intensity:5000,  persistence:0.55 },
+  storm: { label:'Storm', brushSize:0.22, intensity:12000, persistence:0.20 },
+  silk:  { label:'Silk',  brushSize:0.10, intensity:3000,  persistence:0.75 },
+}
+```
+
+#### slime.html
+Slime already has `preset` in its schema (Gossamer/Dense/Rivers/Chaos) wired to its own
+preset system. Wire these to the new `styles` field instead (or in addition):
+```js
+styles: {
+  gossamer: { label:'Gossamer', preset:'gossamer' },
+  dense:    { label:'Dense',    preset:'dense' },
+  rivers:   { label:'Rivers',   preset:'rivers' },
+  chaos:    { label:'Chaos',    preset:'chaos' },
+}
+```
+Keep the `preset` schema item in Controls for backwards compat.
+
+#### flock.html (also fix themes/style separation)
+Flock currently bundles colour + physics + render style inside each theme. Fix this:
+- Split into colour-only themes (hue ranges, sat, lit, palette) and Style presets (physics + render).
+- Style presets map to the old theme behaviour:
+```js
+styles: {
+  murmuration: { label:'Murmuration', speed:1.8, cohesion:1.44, separation:1.04, alignment:2.08, trailLen:20, glowSize:4, renderStyle:'streaks' },
+  fireflies:   { label:'Fireflies',   speed:0.55, cohesion:0.32, separation:0.64, alignment:0.52, trailLen:40, glowSize:7, renderStyle:'glow' },
+  plasma:      { label:'Plasma',      speed:1.2, cohesion:0.52, separation:0.80, alignment:0.84, trailLen:15, glowSize:5, renderStyle:'constellation' },
+  embers:      { label:'Embers',      speed:0.95, cohesion:0.24, separation:0.40, alignment:0.56, trailLen:8,  glowSize:3, renderStyle:'sparks' },
+  aurora:      { label:'Aurora',      speed:0.25, cohesion:0.36, separation:0.44, alignment:0.32, trailLen:60, glowSize:9, renderStyle:'blobs' },
+}
+```
+Themes become colour-only (palette + hue range). The existing render style switching
+(streaks/glow/constellation/sparks/blobs) should be driven by SETTINGS.renderStyle
+which Style presets set, rather than being hardcoded to the theme key.
+
+#### life.html
+```js
+styles: {
+  classic:    { label:'Classic',    speed:3,  cellSize:20, cellShape:'square', trail:3,  brush:'single' },
+  microscope: { label:'Microscope', speed:5,  cellSize:8,  cellShape:'circle', trail:2,  brush:'single' },
+  pixel:      { label:'Pixel',      speed:2,  cellSize:36, cellShape:'square', trail:1,  brush:'single' },
+  neon:       { label:'Neon',       speed:8,  cellSize:14, cellShape:'dot',    trail:8,  brush:'single' },
+}
+```
+
+### 8. Prism theme for all animations
+Add a `prism` theme to every animation that doesn't already have one. Life already has Prism.
+
+**Prism theme spec** (full-spectrum rainbow, works across all animations):
+```js
+prism: {
+  label: '🌈 Prism',
+  colors: [[1,0,0.2],[1,0.6,0],[0.2,1,0.2],[0,0.8,1],[0.7,0.2,1]],
+  // animation-specific colour params vary per animation
+}
+```
+- **fluid**: colors as above, no extra params needed
+- **slime**: hueMin:0, hueMax:1.0, lMax:0.75, sat:1.0
+- **flock**: hueMin:0, hueMax:1.0, sat:1.0, lit:0.62, drift:0 (use murmuration physics initially)
+- **life**: ageHue0:0, ageHue1:360, ageSat:100, ageLit:58, ageLitRange:20, glow:false (already exists)
+- **template**: add as example
+
+### 9. Implementation order
+1. `template.html` — new bar/quick row UI (framework JS + CSS + HTML)
+2. `node sync-framework.js` — propagate to all animations
+3. Add `styles` to each animation's Anim object (fluid, slime, flock, life)
+4. Fix flock theme/style separation (colour-only themes + Style presets drive renderStyle)
+5. Add `prism` theme to fluid, slime, flock (life already has it)
+6. Verify all animations: themes switch, styles switch, colour picker works, controls unchanged, sound unchanged, clear works, reset works
+7. Syntax-check each .html, test in browser, commit + push
+
+### 10. What is NOT changing
+- All existing schema settings (sliders, toggles, chips) remain in Controls panel — nothing removed
+- Sound panel entirely unchanged
+- localStorage persistence — all keys the same, styles just write to existing SETTINGS keys
+- The Anim contract (init/resize/splat/frame/reset) — unchanged
+- Performance system — unchanged, moves to Controls panel
+- 5-touch input — unchanged
+
+---
+
+## Remaining animation roadmap (after UI redesign)
+gravity_sand · kaleidoscope · sound_visualiser · bubble_wrap · lightning · shatter
+
+## Candidate animation ideas (not committed)
+- Reaction–Diffusion (Gray–Scott) — GPU, Turing patterns
+- Lenia / SmoothLife — continuous Game of Life, GPU
+- Cyclic cellular automata — self-organising spirals, GPU
+- Wave / ripple sim — 2D wave equation, GPU, very calming
+- Diffusion-Limited Aggregation (DLA) — crystals from touch
+- Flow-field particles (Perlin noise) — calm streams
+
+## Deferred: accessibility input adapters
+Keyboard/switch scanning mode · Gamepad (Xbox Adaptive) · Webcam motion · Web MIDI.
+Framework-level, add after animations are built.
+
+## Deferred: room lighting (DMX / WLED / Hue)
+Needs a local bridge Node app. Do after all animations exist. See previous NEXT_SESSION.md for full architecture.
 
 ## Conventions
 - Commit messages end with the Co-Authored-By trailer used in existing commits.
-- `git push` after each logical change is fine (user has approved pushing).
+- `git push` after each logical change is fine.
 - CRLF/LF warnings on commit are harmless (Windows).
-- Hardware target: Intel Iris Xe / modern integrated GPU @ 1080p = 60fps. Fluid `DYE_RES` is the
-  perf lever if a weak machine struggles.
+- Hardware target: Intel Iris Xe / modern integrated GPU @ 1080p = 60fps.
+- Syntax check: extract JS to temp file first — `node --check` fails on .html extension in Node v24.
