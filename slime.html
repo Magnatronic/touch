@@ -12,22 +12,31 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 
 /* ── Control bar ─────────────────────────────────────────── */
 #ui{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
-  display:flex;gap:8px;z-index:10;opacity:0.45;transition:opacity 0.4s;align-items:center}
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  z-index:10;opacity:0.45;transition:opacity 0.4s}
 #ui:hover,#ui.open{opacity:1}
+#menuExpand{display:none;flex-direction:column;align-items:center;gap:8px}
+#ui.open #menuExpand{display:flex}
+#quickRow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:600px}
+#bottomRow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 .btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.9);
   padding:9px 18px;border-radius:22px;font-size:13px;cursor:pointer;font-family:sans-serif;
   transition:all 0.2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;white-space:nowrap}
-.btn.active,.btn:hover{background:rgba(255,255,255,0.22);border-color:rgba(255,255,255,0.5)}
+.btn:hover{background:rgba(255,255,255,0.22);border-color:rgba(255,255,255,0.5)}
 #collapse{padding:10px 16px;font-size:16px}
-.cat{display:none}
-#ui.menu .cat{display:inline-flex}
+.bbar{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.85);
+  padding:8px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:sans-serif;
+  transition:all 0.2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;
+  white-space:nowrap;display:inline-flex;align-items:center}
+.bbar:hover{background:rgba(255,255,255,0.18);border-color:rgba(255,255,255,0.45)}
+.bbar.active{background:rgba(255,255,255,0.22);border-color:rgba(255,255,255,0.7);color:#fff}
 
 /* ── Settings panel ──────────────────────────────────────── */
-#panel{position:fixed;left:50%;bottom:74px;transform:translate(-50%,12px);
+#panel{position:fixed;left:50%;bottom:118px;transform:translate(-50%,12px);
   width:calc(100% - 32px);max-width:520px;background:rgba(0,0,0,0.85);backdrop-filter:blur(14px);
   border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 22px;z-index:20;
   opacity:0;pointer-events:none;transition:opacity 0.25s ease, transform 0.25s ease;
-  font-family:sans-serif;color:#fff;max-height:72vh;overflow-y:auto}
+  font-family:sans-serif;color:#fff;max-height:60vh;overflow-y:auto}
 #panel.open{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 .sectn{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
   color:rgba(255,255,255,0.35);margin:18px 0 8px}
@@ -49,46 +58,34 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .switch::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;
   border-radius:50%;background:#fff;transition:transform 0.2s}
 .switch.on::after{transform:translateX(20px)}
-.panelBtns{display:flex;gap:10px;margin-top:18px}
-.panelBtns .btn{flex:1;text-align:center;padding:11px}
-.swatch{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform 0.15s}
+.swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid rgba(255,255,255,0.25);
+  transition:transform 0.15s;flex-shrink:0}
 .swatch:hover{transform:scale(1.12)}
-.swatch.active{border-color:#fff}
-#colourGroup{display:flex;align-items:center;gap:8px;padding:4px 10px;margin-bottom:8px;
-  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:22px}
+.swatch.active{border-color:#fff;transform:scale(1.1)}
 .autochip{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);
-  color:rgba(255,255,255,0.9);height:30px;padding:0 12px;border-radius:15px;font-size:13px;cursor:pointer;
-  transition:all 0.2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;
-  display:flex;align-items:center;justify-content:center;gap:4px;flex:none;white-space:nowrap}
+  color:rgba(255,255,255,0.9);height:28px;padding:0 12px;border-radius:14px;font-size:12px;cursor:pointer;
+  font-family:sans-serif;transition:all 0.2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  user-select:none;display:flex;align-items:center;flex:none;white-space:nowrap}
 .autochip:hover{background:rgba(255,255,255,0.22)}
 .autochip.active{background:rgba(255,255,255,0.22);border-color:#fff}
-#barSwatches{display:flex;gap:6px;align-items:center}
-#barSwatches .swatch{width:24px;height:24px;border:2px solid rgba(255,255,255,0.25)}
-#barSwatches .swatch.active{border-color:#fff;transform:scale(1.1)}
-.picker{position:relative;width:24px;height:24px;border-radius:50%;overflow:hidden;
+.picker{position:relative;width:24px;height:24px;border-radius:50%;overflow:hidden;flex-shrink:0;
   border:2px solid rgba(255,255,255,0.25);cursor:pointer;
   background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)}
 .picker.active{border-color:#fff}
 .picker input{position:absolute;inset:-4px;width:200%;height:200%;opacity:0;cursor:pointer;border:none;padding:0}
-.bgrow{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
-.bgsw{width:28px;height:28px;border-radius:8px;cursor:pointer;border:2px solid rgba(255,255,255,0.25);transition:transform 0.15s}
-.bgsw:hover{transform:scale(1.1)}
-.bgsw.active{border-color:#fff}
-.note{font-size:12px;color:rgba(255,255,255,0.4);margin:4px 0 8px}
+.qsep{color:rgba(255,255,255,0.25);font-size:18px;line-height:28px;user-select:none;flex-shrink:0}
+.bgpick{position:relative;overflow:hidden;cursor:pointer;font-size:11px;
+  color:rgba(255,255,255,0.75);padding:0 10px;height:28px;border-radius:14px}
+.bgpick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 14px}
 .chip{padding:7px 13px;border-radius:16px;background:rgba(255,255,255,0.08);
   border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.85);font-size:12px;cursor:pointer;
-  touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;transition:all 0.15s}
+  font-family:sans-serif;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  user-select:none;transition:all 0.15s}
 .chip:hover{background:rgba(255,255,255,0.16)}
 .chip.active{background:rgba(255,255,255,0.24);border-color:#fff;color:#fff}
-#tabs{display:flex;gap:8px;margin:2px 0 16px}
-.tab{flex:1;padding:11px;border-radius:12px;background:rgba(255,255,255,0.06);
-  border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.65);font-size:14px;cursor:pointer;
-  font-family:sans-serif;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;transition:all 0.15s}
-.tab.active{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.6);color:#fff}
 .pane{display:none}
 .pane.active{display:block}
-.themeRow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
 #stats{position:fixed;top:10px;left:12px;z-index:30;display:none;
   font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:rgba(255,255,255,0.85);
   background:rgba(0,0,0,0.45);padding:6px 9px;border-radius:8px;pointer-events:none;white-space:pre}
@@ -101,32 +98,26 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 <div id="stats"></div>
 
 <div id="ui">
+  <div id="menuExpand">
+    <div id="quickRow"></div>
+    <div id="bottomRow">
+      <button class="bbar" id="btnTheme"    data-mode="theme">🎨 Theme</button>
+      <button class="bbar" id="btnStyle"    data-mode="style">✨ Style</button>
+      <button class="bbar" id="btnColour"   data-mode="colour">💛 Colour</button>
+      <button class="bbar" id="btnControls" data-mode="controls">🎛️ Controls</button>
+      <button class="bbar" id="btnSound"    data-mode="sound">🔊 Sound</button>
+      <button class="bbar" id="btnClear">🧹</button>
+    </div>
+  </div>
   <button class="btn" id="collapse" title="Menu">≡</button>
-  <button class="btn cat" data-pane="appearance">✨ Appearance</button>
-  <button class="btn cat" data-pane="sound">🔊 Sound</button>
 </div>
 
 <div id="panel">
-  <div class="pane active" id="paneAppearance">
-    <div class="sectn">Theme</div>
-    <div class="themeRow" id="themeRow"></div>
-    <div class="sectn">Colour</div>
-    <div id="colourGroup">
-      <button id="autoBtn" class="autochip" title="Cycle through palette colours">↻ Auto</button>
-      <div id="barSwatches" title="Tap a colour to lock it"></div>
-    </div>
-    <div id="appSliders"></div>
-    <div class="sectn">Background</div>
-    <div class="bgrow" id="bgRow"></div>
+  <div class="pane" id="paneControls">
+    <div id="controlsContent"></div>
   </div>
-
   <div class="pane" id="paneSound">
     <div id="soundControls"></div>
-  </div>
-
-  <div class="panelBtns">
-    <button class="btn" id="clearBtn">🧹 Clear canvas</button>
-    <button class="btn" id="resetBtn">↺ Reset settings</button>
   </div>
 </div>
 <!-- ===== FRAMEWORK-HTML END ===== -->
@@ -145,9 +136,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 const canvas   = document.getElementById('c');
 const ui       = document.getElementById('ui');
 const panel    = document.getElementById('panel');
-const themeRow = document.getElementById('themeRow');
-const barSwatches = document.getElementById('barSwatches');
-const autoBtn  = document.getElementById('autoBtn');
+const quickRow = document.getElementById('quickRow');
 
 const STORE_KEY = 'settings:' + location.pathname.split('/').pop();
 
@@ -160,6 +149,7 @@ const SHARED_DEFAULTS = {
 
 let SETTINGS = {}, currentTheme = '', colorIdx = 0;
 let bgRGB = [0,0,0];
+let currentQuickMode = null;
 
 function initSettings(){
   SETTINGS = Object.assign({}, SHARED_DEFAULTS, Anim.defaults||{});
@@ -204,6 +194,11 @@ function pickColor(){
   else { const cols = Anim.themes[currentTheme].colors; c = cols[colorIdx++ % cols.length]; }
   return [c[0]*VIVID, c[1]*VIVID, c[2]*VIVID];
 }
+
+const STANDARD_SWATCHES = [
+  [1,0.12,0.12],[1,0.50,0.0],[1,0.90,0.05],[0.12,0.85,0.12],
+  [0.0,0.80,1.0],[0.15,0.35,1.0],[0.65,0.15,1.0],[1,1,1],
+];
 
 // ── Audio engine ───────────────────────────────────────────────────────────────
 let audioCtx=null, masterGain=null, convolver=null, reverbWet=null, echoWet=null, chorusWet=null, limiter=null;
@@ -390,45 +385,94 @@ function rgbCss(c){ return `rgb(${Math.round(Math.min(c[0],1)*255)},${Math.round
 
 function setTheme(name){
   currentTheme=name; SETTINGS.theme=name; saveSettings();
-  themeRow.querySelectorAll('.btn').forEach(x=>x.classList.toggle('active',x.dataset.theme===name));
-  buildSwatches();
+  if(currentQuickMode==='theme') buildQuickTheme();
 }
-function buildThemeButtons(){
-  themeRow.innerHTML='';
+
+function buildQuickTheme(){
+  quickRow.innerHTML='';
   for(const k in Anim.themes){
-    const b=document.createElement('button'); b.className='btn'+(k===currentTheme?' active':'');
-    b.dataset.theme=k; b.textContent=Anim.themes[k].label||k;
+    const b=document.createElement('button'); b.className='chip'+(k===currentTheme?' active':'');
+    b.textContent=Anim.themes[k].label||k;
     b.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); setTheme(k); });
-    themeRow.appendChild(b);
+    quickRow.appendChild(b);
   }
 }
-function refreshColourUI(){
-  const locked=SETTINGS.lockedColor;
-  autoBtn.classList.toggle('active',!locked);
-  barSwatches.querySelectorAll('.swatch').forEach(sw=>{
-    const c=sw._rgb;
-    sw.classList.toggle('active', !!locked && c && Math.abs(c[0]-locked[0])<0.01 && Math.abs(c[1]-locked[1])<0.01 && Math.abs(c[2]-locked[2])<0.01);
-  });
-  const pk=barSwatches.querySelector('.picker');
-  if(pk) pk.classList.toggle('active', !!locked && !barSwatches.querySelector('.swatch.active'));
+
+function buildQuickStyle(){
+  quickRow.innerHTML='';
+  if(!Anim.styles) return;
+  const activeKey=getCurrentStyleKey();
+  for(const k in Anim.styles){
+    const b=document.createElement('button'); b.className='chip'+(k===activeKey?' active':'');
+    b.textContent=Anim.styles[k].label||k;
+    b.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); applyStyle(k); });
+    quickRow.appendChild(b);
+  }
 }
-function lockColour(rgb){ SETTINGS.lockedColor = rgb ? rgb.slice() : null; saveSettings(); refreshColourUI(); }
-function buildSwatches(){
-  barSwatches.innerHTML='';
-  Anim.themes[currentTheme].colors.forEach(c=>{
-    const sw=document.createElement('div'); sw.className='swatch'; sw._rgb=c.slice(); sw.style.background=rgbCss(c);
+
+function getCurrentStyleKey(){
+  if(!Anim.styles) return null;
+  for(const k in Anim.styles){
+    const s=Anim.styles[k]; let match=true;
+    for(const key in s){ if(key==='label') continue; if(SETTINGS[key]!==s[key]){match=false;break;} }
+    if(match) return k;
+  }
+  return null;
+}
+
+function applyStyle(key){
+  const s=Anim.styles&&Anim.styles[key]; if(!s) return;
+  for(const k in s){ if(k!=='label') SETTINGS[k]=s[k]; }
+  saveSettings();
+  if(currentQuickMode==='style') buildQuickStyle();
+}
+
+function buildQuickColour(){
+  quickRow.innerHTML='';
+  // Auto button
+  const auto=document.createElement('button'); auto.className='autochip'+(SETTINGS.lockedColor?'':' active');
+  auto.textContent='↻ Auto';
+  auto.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); lockColour(null); });
+  quickRow.appendChild(auto);
+  // Standard colour swatches
+  STANDARD_SWATCHES.forEach(c=>{
+    const sw=document.createElement('div'); sw.className='swatch'; sw._rgb=c; sw.style.background=rgbCss(c);
+    const lk=SETTINGS.lockedColor;
+    if(lk) sw.classList.toggle('active',Math.abs(c[0]-lk[0])<0.05&&Math.abs(c[1]-lk[1])<0.05&&Math.abs(c[2]-lk[2])<0.05);
     sw.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); lockColour(c); });
-    barSwatches.appendChild(sw);
+    quickRow.appendChild(sw);
   });
+  // Custom colour picker
   const pk=document.createElement('label'); pk.className='picker'; pk.title='Pick a custom colour';
   const inp=document.createElement('input'); inp.type='color';
-  inp.value = SETTINGS.lockedColor ? '#'+SETTINGS.lockedColor.map(v=>('0'+Math.round(Math.min(v,1)*255).toString(16)).slice(-2)).join('') : '#ffffff';
+  inp.value=SETTINGS.lockedColor?'#'+SETTINGS.lockedColor.map(v=>('0'+Math.round(Math.min(v,1)*255).toString(16)).slice(-2)).join(''):'#ffffff';
   inp.addEventListener('input',e=>{ e.stopPropagation(); getAudio(); lockColour(hexToRGB(inp.value)); });
   pk.addEventListener('click',e=>e.stopPropagation());
-  pk.appendChild(inp); barSwatches.appendChild(pk);
-  refreshColourUI();
+  pk.appendChild(inp); quickRow.appendChild(pk);
+  // Divider
+  const sep=document.createElement('span'); sep.className='qsep'; sep.textContent='┊'; quickRow.appendChild(sep);
+  // Background colour picker
+  const bgpk=document.createElement('label'); bgpk.className='bbar bgpick'; bgpk.title='Background colour';
+  bgpk.textContent='bg:';
+  const bgInp=document.createElement('input'); bgInp.type='color'; bgInp.value=SETTINGS.bg;
+  bgInp.addEventListener('input',e=>{ e.stopPropagation(); SETTINGS.bg=bgInp.value; saveSettings(); applyBg(); });
+  bgpk.addEventListener('click',e=>e.stopPropagation());
+  bgpk.appendChild(bgInp); quickRow.appendChild(bgpk);
+  refreshQuickColour();
 }
-autoBtn.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); lockColour(null); });
+
+function refreshQuickColour(){
+  if(currentQuickMode!=='colour') return;
+  const lk=SETTINGS.lockedColor;
+  const auto=quickRow.querySelector('.autochip'); if(auto) auto.classList.toggle('active',!lk);
+  quickRow.querySelectorAll('.swatch').forEach(sw=>{
+    const c=sw._rgb;
+    sw.classList.toggle('active',!!lk&&!!c&&Math.abs(c[0]-lk[0])<0.05&&Math.abs(c[1]-lk[1])<0.05&&Math.abs(c[2]-lk[2])<0.05);
+  });
+  const pk=quickRow.querySelector('.picker'); if(pk) pk.classList.toggle('active',!!lk&&!quickRow.querySelector('.swatch.active'));
+}
+
+function lockColour(rgb){ SETTINGS.lockedColor=rgb?rgb.slice():null; saveSettings(); refreshQuickColour(); }
 
 function makeSlider(item){
   const row=document.createElement('div'); row.className='row';
@@ -471,36 +515,34 @@ function makeChips(label,key,map,onChange){
   }
   wrap.appendChild(chips); return wrap;
 }
-const BG_PRESETS = [
-  ['Black','#000000'],['Navy','#0a1228'],['Charcoal','#1a1a1f'],
-  ['Deep purple','#150720'],['Forest','#04140c'],
-];
-function buildBgRow(container){
-  container.innerHTML='';
-  BG_PRESETS.forEach(([label,hex])=>{
-    const sw=document.createElement('div'); sw.className='bgsw'; sw.title=label; sw.style.background=hex; sw._hex=hex;
-    sw.addEventListener('click',e=>{ e.stopPropagation(); SETTINGS.bg=hex; saveSettings(); applyBg(); refreshBgRow(container); });
-    container.appendChild(sw);
+
+function buildControlsPanel(){
+  const el=document.getElementById('controlsContent'); el.innerHTML='';
+  const h=document.createElement('div'); h.className='sectn'; h.textContent=Anim.sectionLabel||'Controls'; el.appendChild(h);
+  (Anim.schema||[]).forEach(it=>{
+    if(it.type==='toggle') el.appendChild(makeToggle(it.label,it.key));
+    else if(it.type==='preset-chips') el.appendChild(makeChips(it.label,it.key,it.options));
+    else el.appendChild(makeSlider(it));
   });
-  const pk=document.createElement('label'); pk.className='picker'; pk.style.borderRadius='8px'; pk.title='Custom background';
-  const inp=document.createElement('input'); inp.type='color'; inp.value=SETTINGS.bg;
-  inp.addEventListener('input',e=>{ e.stopPropagation(); SETTINGS.bg=inp.value; saveSettings(); applyBg(); refreshBgRow(container); });
-  pk.addEventListener('click',e=>e.stopPropagation());
-  pk.appendChild(inp); container.appendChild(pk);
-  refreshBgRow(container);
+  el.appendChild(makeChips('Performance','quality',QUALITY,()=>{ if(SETTINGS.quality!=='auto') setPerf(SETTINGS.quality); }));
+  el.appendChild(makeToggle('Show performance','showStats',applyStats));
+  const resetBtn=document.createElement('button'); resetBtn.className='btn';
+  resetBtn.style.cssText='margin-top:14px;width:100%;text-align:center';
+  resetBtn.textContent='↺ Reset settings';
+  resetBtn.addEventListener('click',e=>{ e.stopPropagation();
+    SETTINGS=Object.assign({},SHARED_DEFAULTS,Anim.defaults||{}); saveSettings();
+    const tk=Object.keys(Anim.themes); currentTheme=tk.includes(SETTINGS.theme)?SETTINGS.theme:tk[0];
+    buildControlsPanel(); buildSoundPanel(); buildScale();
+    applyVolume(); applyReverb(); applyEcho(); applyChorus(); applyBg();
+    if(Anim.reset) Anim.reset();
+    if(currentQuickMode==='theme') buildQuickTheme();
+    else if(currentQuickMode==='style') buildQuickStyle();
+    else if(currentQuickMode==='colour') buildQuickColour();
+  });
+  el.appendChild(resetBtn);
 }
-function refreshBgRow(container){
-  let matched=false;
-  container.querySelectorAll('.bgsw').forEach(sw=>{ const on=sw._hex.toLowerCase()===SETTINGS.bg.toLowerCase(); sw.classList.toggle('active',on); if(on) matched=true; });
-  const pk=container.querySelector('.picker'); if(pk) pk.classList.toggle('active',!matched);
-}
-function buildPanel(){
-  const app=document.getElementById('appSliders'); app.innerHTML='';
-  const h=document.createElement('div'); h.className='sectn'; h.textContent=Anim.sectionLabel||'Controls'; app.appendChild(h);
-  (Anim.schema||[]).forEach(it=>app.appendChild(it.type==='toggle'?makeToggle(it.label,it.key):it.type==='preset-chips'?makeChips(it.label,it.key,it.options):makeSlider(it)));
-  app.appendChild(makeChips('Performance','quality',QUALITY,()=>{ if(SETTINGS.quality!=='auto') setPerf(SETTINGS.quality); }));
-  app.appendChild(makeToggle('Show performance','showStats',applyStats));
-  buildBgRow(document.getElementById('bgRow'));
+
+function buildSoundPanel(){
   const snd=document.getElementById('soundControls'); snd.innerHTML='';
   snd.appendChild(makeChips('Voice','voice',VOICES));
   snd.appendChild(makeChips('Scale / mood','scale',SCALES,buildScale));
@@ -512,32 +554,39 @@ function buildPanel(){
   snd.appendChild(makeSlider({key:'volume',label:'Volume',min:0,max:1,step:0.01,dp:2}));
 }
 
-// ── Menu / tabs ─────────────────────────────────────────────────────────────────
-let currentPane=null;
-function showPane(name){
-  currentPane=name;
-  const id='pane'+name.charAt(0).toUpperCase()+name.slice(1);
+// ── Menu bar ───────────────────────────────────────────────────────────────────
+function closePanel(){ panel.classList.remove('open'); document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active')); }
+function showPanel(name){
+  const id=name==='controls'?'paneControls':'paneSound';
   document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('active',p.id===id));
-  document.querySelectorAll('.cat').forEach(c=>c.classList.toggle('active',c.dataset.pane===name));
   panel.classList.add('open');
 }
-function closePanel(){ currentPane=null; panel.classList.remove('open'); document.querySelectorAll('.cat').forEach(c=>c.classList.remove('active')); }
+function updateBarButtons(){
+  document.querySelectorAll('.bbar[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===currentQuickMode));
+}
+function showQuickMode(mode){
+  if(currentQuickMode===mode){ currentQuickMode=null; quickRow.innerHTML=''; closePanel(); updateBarButtons(); return; }
+  currentQuickMode=mode; updateBarButtons(); closePanel(); quickRow.innerHTML='';
+  if(mode==='controls') showPanel('controls');
+  else if(mode==='sound') showPanel('sound');
+  else if(mode==='theme') buildQuickTheme();
+  else if(mode==='style') buildQuickStyle();
+  else if(mode==='colour') buildQuickColour();
+}
+
 document.getElementById('collapse').addEventListener('click',e=>{
   e.stopPropagation(); getAudio();
-  if(ui.classList.contains('menu')){ ui.classList.remove('menu'); closePanel(); } else { ui.classList.add('menu'); }
+  if(ui.classList.contains('open')){
+    ui.classList.remove('open'); currentQuickMode=null; quickRow.innerHTML='';
+    closePanel(); updateBarButtons();
+  } else {
+    ui.classList.add('open'); showQuickMode('theme');
+  }
 });
-document.querySelectorAll('.cat').forEach(c=>{
-  c.addEventListener('click',e=>{ e.stopPropagation(); getAudio();
-    const name=c.dataset.pane; if(currentPane===name) closePanel(); else showPane(name); });
+document.querySelectorAll('.bbar[data-mode]').forEach(btn=>{
+  btn.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); showQuickMode(btn.dataset.mode); });
 });
-document.getElementById('clearBtn').addEventListener('click',e=>{ e.stopPropagation(); if(Anim.reset) Anim.reset(); });
-document.getElementById('resetBtn').addEventListener('click',e=>{
-  e.stopPropagation();
-  SETTINGS=Object.assign({}, SHARED_DEFAULTS, Anim.defaults||{}); saveSettings();
-  buildThemeButtons(); setTheme(SETTINGS.theme); buildPanel(); buildScale();
-  applyVolume(); applyReverb(); applyEcho(); applyChorus(); applyBg();
-  if(Anim.reset) Anim.reset();
-});
+document.getElementById('btnClear').addEventListener('click',e=>{ e.stopPropagation(); if(Anim.reset) Anim.reset(); });
 panel.addEventListener('mousedown',e=>e.stopPropagation());
 panel.addEventListener('touchstart',e=>e.stopPropagation(),{passive:false});
 
@@ -582,11 +631,12 @@ function loop(){
 function boot(){
   initSettings();
   buildScale();
-  buildThemeButtons();
-  buildPanel();
+  buildControlsPanel();
+  buildSoundPanel();
   setTheme(currentTheme);
   applyBg();
   applyStats();
+  if(!Anim.styles) document.getElementById('btnStyle').style.display='none';
   setupGL();
   canvas.addEventListener('webglcontextlost', e=>{ e.preventDefault(); glLost=true; }, false);
   canvas.addEventListener('webglcontextrestored', ()=>{ glLost=false; setupGL(); }, false);
