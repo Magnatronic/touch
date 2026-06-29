@@ -17,8 +17,12 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #ui:hover,#ui.open{opacity:1}
 #menuExpand{display:none;flex-direction:column;align-items:center;gap:8px}
 #ui.open #menuExpand{display:flex}
-#quickRow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:600px}
-#bottomRow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+#quickRow{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;max-width:calc(100vw - 32px);
+  scrollbar-width:none;-ms-overflow-style:none}
+#quickRow::-webkit-scrollbar{display:none}
+#bottomRow{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;max-width:calc(100vw - 32px);
+  scrollbar-width:none;-ms-overflow-style:none}
+#bottomRow::-webkit-scrollbar{display:none}
 .btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.9);
   padding:9px 18px;border-radius:22px;font-size:13px;cursor:pointer;font-family:sans-serif;
   transition:all 0.2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;white-space:nowrap}
