@@ -674,27 +674,27 @@ const Anim = (() => {
 
   /* ── Themes (colour-only — physics/render driven by Style presets via SETTINGS) ── */
   const THEME_DATA = {
-    murmuration: {
-      label:'🐦 Murmuration',
+    sky:          {
+      label:'🩵 Sky',
       colors:[[0.4,0.6,1],[0.5,0.75,1],[0.3,0.5,0.9],[0.8,0.9,1],[0.45,0.65,1]],
       hueMin:0.50, hueMax:0.78, drift:0, sat:0.80, lit:0.62,
     },
-    fireflies: {
-      label:'🌟 Fireflies',
+    garden:       {
+      label:'🌿 Garden',
       colors:[[1,0.7,0.1],[0.35,0.95,0.25],[1,0.5,0.05],[0.45,1,0.4],[1,0.8,0.2]],
       hueMin:0.06, hueMax:0.32, drift:0, sat:0.95, lit:0.65,
     },
-    plasma: {
-      label:'⚡ Plasma',
+    violet:       {
+      label:'💜 Violet',
       colors:[[1,0.05,0.8],[0,1,0.9],[0.8,0.05,1],[0.05,0.8,1],[1,0.25,0.9]],
       hueMin:0.70, hueMax:1.00, drift:0, sat:1.0, lit:0.62,
     },
-    embers: {
+    embers:       {
       label:'🔥 Embers',
       colors:[[1,0.25,0],[1,0.5,0.08],[1,0.12,0],[0.92,0.4,0],[1,0.65,0.05]],
       hueMin:0.0, hueMax:0.11, drift:-55, sat:1.0, lit:0.58,
     },
-    aurora: {
+    aurora:       {
       label:'🌌 Aurora',
       colors:[[0.1,1,0.5],[0.65,0.1,1],[0.05,0.9,0.65],[0.8,0.25,1],[0.1,0.85,0.45]],
       hueMin:0.20, hueMax:0.82, drift:0, sat:0.85, lit:0.55,
@@ -764,7 +764,7 @@ const Anim = (() => {
 
   /* ── Agent management ── */
   function spawnAgent(){
-    const th = THEME_DATA[currentTheme] || THEME_DATA.murmuration;
+    const th = THEME_DATA[currentTheme] || THEME_DATA.sky;
     const hue = th.hueMin + Math.random()*(th.hueMax - th.hueMin);
     return {
       x: Math.random()*W, y: Math.random()*H,
@@ -1057,7 +1057,7 @@ const Anim = (() => {
     themes: THEME_DATA,
 
     defaults: {
-      theme:'murmuration', renderStyle:'streaks',
+      theme:'sky', renderStyle:'streaks',
       count:500, speed:1.8,
       cohesion:1.44, separation:1.04, alignment:2.08,
       pull:2.0, trailLen:20, glowSize:4, repel:false,
