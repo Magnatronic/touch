@@ -11,27 +11,40 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 canvas{display:block;width:100%;height:100%;touch-action:none}
 
 /* ── Control bar ─────────────────────────────────────────── */
-#ui{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  z-index:10;opacity:0.45;transition:opacity 0.4s}
-#ui:hover,#ui.open{opacity:1}
-#menuExpand{display:none;flex-direction:column;align-items:center;gap:8px}
+/* Full-height, click-through container pinned to the left edge. align-items:center keeps
+   each column vertically centred INDEPENDENTLY, so the rail never shifts when the menu opens. */
+#ui{position:fixed;left:16px;top:0;height:100vh;
+  display:flex;flex-direction:row;align-items:center;gap:8px;
+  z-index:10;pointer-events:none}
+#ui > *{pointer-events:auto}
+#rail{display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  opacity:0.5;transition:opacity 0.4s}
+#rail:hover,#ui.open #rail{opacity:1}
+#railExtra{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+#railExtra:empty{display:none}
+#menuExpand{display:none;flex-direction:row;align-items:center;gap:8px;max-height:100vh}
 #ui.open #menuExpand{display:flex}
-#quickRow{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;max-width:calc(100vw - 32px);
-  scrollbar-width:none;-ms-overflow-style:none}
+#quickRow{display:flex;flex-direction:column;gap:8px;align-items:stretch;
+  max-height:96vh;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;
+  background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.14);
+  border-radius:16px;padding:12px;backdrop-filter:blur(8px)}
+#quickRow:empty{display:none}
 #quickRow::-webkit-scrollbar{display:none}
-#bottomRow{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;max-width:calc(100vw - 32px);
-  scrollbar-width:none;-ms-overflow-style:none}
+#quickRow .chip{text-align:center}
+#quickRow .autochip,#quickRow .bgpick{width:100%;justify-content:center}
+.swatchgrid{display:grid;grid-template-columns:repeat(2,auto);gap:8px;justify-content:center;justify-items:center}
+#bottomRow{display:flex;flex-direction:column;gap:6px;align-items:flex-start;
+  max-height:96vh;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none}
 #bottomRow::-webkit-scrollbar{display:none}
 .btn{background:rgba(0,0,0,0.50);border:1px solid rgba(255,255,255,0.22);color:rgba(255,255,255,0.95);
   padding:9px 18px;border-radius:22px;font-size:13px;cursor:pointer;font-family:sans-serif;
   transition:all 0.2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;white-space:nowrap;
   text-shadow:0 1px 3px rgba(0,0,0,0.9)}
 .btn:hover{background:rgba(0,0,0,0.70);border-color:rgba(255,255,255,0.55)}
-#collapse{padding:10px 16px;font-size:16px}
-#homeBtn{position:fixed;bottom:18px;left:18px;z-index:10;opacity:0.45;transition:opacity 0.4s;
-  padding:10px 16px;font-size:16px;text-decoration:none}
-#homeBtn:hover{opacity:1}
+.btn.active{background:rgba(0,0,0,0.70);border-color:rgba(255,255,255,0.75);color:#fff}
+#rail .btn,#railExtra .btn{font-size:18px;padding:11px 15px;min-width:48px;text-align:center}
+#collapse{font-size:18px}
+#homeBtn{text-decoration:none}
 .bbar{background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.20);color:rgba(255,255,255,0.95);
   padding:8px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:sans-serif;
   transition:all 0.2s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;
@@ -40,12 +53,10 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .bbar.active{background:rgba(0,0,0,0.65);border-color:rgba(255,255,255,0.75);color:#fff}
 
 /* ── Settings panel ──────────────────────────────────────── */
-#panel{position:fixed;left:50%;bottom:118px;transform:translate(-50%,12px);
-  width:calc(100% - 32px);max-width:520px;background:rgba(0,0,0,0.85);backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 22px;z-index:20;
-  opacity:0;pointer-events:none;transition:opacity 0.25s ease, transform 0.25s ease;
-  font-family:sans-serif;color:#fff;max-height:60vh;overflow-y:auto}
-#panel.open{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#panel{display:none;width:44vw;max-width:440px;background:rgba(0,0,0,0.85);backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 22px;
+  font-family:sans-serif;color:#fff;max-height:88vh;overflow-y:auto}
+#panel.open{display:block}
 .sectn{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
   color:rgba(255,255,255,0.35);margin:18px 0 8px}
 .pane > .sectn:first-child{margin-top:2px}
@@ -81,7 +92,8 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
   background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red)}
 .picker.active{border-color:#fff}
 .picker input{position:absolute;inset:-4px;width:200%;height:200%;opacity:0;cursor:pointer;border:none;padding:0}
-.qsep{color:rgba(255,255,255,0.25);font-size:18px;line-height:28px;user-select:none;flex-shrink:0}
+.qsep{display:block;width:100%;height:1px;background:rgba(255,255,255,0.15);
+  font-size:0;line-height:0;user-select:none;flex-shrink:0;margin:2px 0}
 .bgpick{position:relative;overflow:hidden;cursor:pointer;font-size:11px;
   color:rgba(255,255,255,0.75);padding:0 10px;height:28px;border-radius:14px}
 .bgpick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
@@ -106,8 +118,12 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 <div id="stats"></div>
 
 <div id="ui">
+  <div id="rail">
+    <a href="index.html" id="homeBtn" class="btn" title="Home">⌂</a>
+    <button class="btn" id="collapse" title="Menu">≡</button>
+    <div id="railExtra"></div>
+  </div>
   <div id="menuExpand">
-    <div id="quickRow"></div>
     <div id="bottomRow">
       <button class="bbar" id="btnTheme"    data-mode="theme">🎨 Theme</button>
       <button class="bbar" id="btnStyle"    data-mode="style">✨ Style</button>
@@ -116,18 +132,15 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
       <button class="bbar" id="btnSound"    data-mode="sound">🔊 Sound</button>
       <button class="bbar" id="btnClear">🧹</button>
     </div>
+    <div id="quickRow"></div>
   </div>
-  <button class="btn" id="collapse" title="Menu">≡</button>
-</div>
-
-<a href="index.html" id="homeBtn" class="btn" title="Home">⌂</a>
-
-<div id="panel">
-  <div class="pane" id="paneControls">
-    <div id="controlsContent"></div>
-  </div>
-  <div class="pane" id="paneSound">
-    <div id="soundControls"></div>
+  <div id="panel">
+    <div class="pane" id="paneControls">
+      <div id="controlsContent"></div>
+    </div>
+    <div class="pane" id="paneSound">
+      <div id="soundControls"></div>
+    </div>
   </div>
 </div>
 <!-- ===== FRAMEWORK-HTML END ===== -->
@@ -144,9 +157,10 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 */
 
 const canvas   = document.getElementById('c');
-const ui       = document.getElementById('ui');
-const panel    = document.getElementById('panel');
-const quickRow = document.getElementById('quickRow');
+const ui        = document.getElementById('ui');
+const panel     = document.getElementById('panel');
+const quickRow  = document.getElementById('quickRow');
+const railExtra = document.getElementById('railExtra');
 
 const STORE_KEY = 'settings:' + location.pathname.split('/').pop();
 
@@ -394,7 +408,9 @@ canvas.addEventListener('touchcancel',e=>{ for(const t of e.changedTouches) onUp
 function rgbCss(c){ return `rgb(${Math.round(Math.min(c[0],1)*255)},${Math.round(Math.min(c[1],1)*255)},${Math.round(Math.min(c[2],1)*255)})`; }
 
 function setTheme(name){
-  currentTheme=name; SETTINGS.theme=name; saveSettings();
+  currentTheme=name; SETTINGS.theme=name;
+  SETTINGS.lockedColor=null; // picking a theme reverts colour to Auto
+  saveSettings();
   if(currentQuickMode==='theme') buildQuickTheme();
 }
 
@@ -444,13 +460,14 @@ function buildQuickColour(){
   auto.textContent='↻ Auto';
   auto.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); lockColour(null); });
   quickRow.appendChild(auto);
-  // Standard colour swatches
+  // Standard colour swatches + custom picker, laid out in a 2-column grid
+  const grid=document.createElement('div'); grid.className='swatchgrid';
   STANDARD_SWATCHES.forEach(c=>{
     const sw=document.createElement('div'); sw.className='swatch'; sw._rgb=c; sw.style.background=rgbCss(c);
     const lk=SETTINGS.lockedColor;
     if(lk) sw.classList.toggle('active',Math.abs(c[0]-lk[0])<0.05&&Math.abs(c[1]-lk[1])<0.05&&Math.abs(c[2]-lk[2])<0.05);
     sw.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); lockColour(c); });
-    quickRow.appendChild(sw);
+    grid.appendChild(sw);
   });
   // Custom colour picker
   const pk=document.createElement('label'); pk.className='picker'; pk.title='Pick a custom colour';
@@ -458,7 +475,8 @@ function buildQuickColour(){
   inp.value=SETTINGS.lockedColor?'#'+SETTINGS.lockedColor.map(v=>('0'+Math.round(Math.min(v,1)*255).toString(16)).slice(-2)).join(''):'#ffffff';
   inp.addEventListener('input',e=>{ e.stopPropagation(); getAudio(); lockColour(hexToRGB(inp.value)); });
   pk.addEventListener('click',e=>e.stopPropagation());
-  pk.appendChild(inp); quickRow.appendChild(pk);
+  pk.appendChild(inp); grid.appendChild(pk);
+  quickRow.appendChild(grid);
   // Divider
   const sep=document.createElement('span'); sep.className='qsep'; sep.textContent='┊'; quickRow.appendChild(sep);
   // Background colour picker
@@ -574,10 +592,36 @@ function showPanel(name){
 function updateBarButtons(){
   document.querySelectorAll('.bbar[data-mode]').forEach(b=>b.classList.toggle('active',b.dataset.mode===currentQuickMode));
 }
+
+// ── Animation-provided rail buttons (persistent controls, e.g. Play/Pause) ────────
+// Anim.railButtons: [{ id, icon():str, title():str, active():bool, key:str, onClick() }]
+function buildRailButtons(){
+  railExtra.innerHTML='';
+  (Anim.railButtons||[]).forEach(desc=>{
+    const b=document.createElement('button'); b.className='btn'; b.dataset.rail=desc.id;
+    b.addEventListener('click',e=>{ e.stopPropagation(); getAudio(); desc.onClick(); refreshRailButtons(); });
+    railExtra.appendChild(b);
+  });
+  refreshRailButtons();
+}
+function refreshRailButtons(){
+  (Anim.railButtons||[]).forEach(desc=>{
+    const b=railExtra.querySelector('[data-rail="'+desc.id+'"]'); if(!b) return;
+    if(desc.icon)   b.textContent=desc.icon();
+    if(desc.title)  b.title=desc.title();
+    if(desc.active) b.classList.toggle('active',!!desc.active());
+  });
+}
+window.addEventListener('keydown',e=>{
+  if(e.target!==document.body) return;
+  const desc=(Anim.railButtons||[]).find(d=>d.key&&d.key===e.key);
+  if(!desc) return;
+  e.preventDefault(); getAudio(); desc.onClick(); refreshRailButtons();
+});
 function showQuickMode(mode){
   if(currentQuickMode===mode){ currentQuickMode=null; quickRow.innerHTML=''; closePanel(); updateBarButtons(); return; }
   currentQuickMode=mode; updateBarButtons(); closePanel(); quickRow.innerHTML='';
-  if(mode==='controls') showPanel('controls');
+  if(mode==='controls'){ buildControlsPanel(); showPanel('controls'); }
   else if(mode==='sound') showPanel('sound');
   else if(mode==='theme') buildQuickTheme();
   else if(mode==='style') buildQuickStyle();
@@ -643,6 +687,7 @@ function boot(){
   buildScale();
   buildControlsPanel();
   buildSoundPanel();
+  buildRailButtons();
   setTheme(currentTheme);
   applyBg();
   applyStats();
@@ -666,14 +711,6 @@ const Anim = (() => {
   let visFades, visColors; // per-cell smooth fade for birth/death transitions
   let genAccum = 0;
   let audioBudget = 1; // notes per generation (1 = single melodic note)
-  let playBtn = null;
-
-  function updatePlayBtn() {
-    if (!playBtn) return;
-    playBtn.textContent = SETTINGS.playing ? '⏸' : '▶';
-    playBtn.title = SETTINGS.playing ? 'Pause (Space)' : 'Play (Space)';
-    playBtn.style.opacity = SETTINGS.playing ? '0.9' : '0.5';
-  }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -955,6 +992,15 @@ const Anim = (() => {
       voice:      'bell',
     },
 
+    railButtons: [{
+      id: 'play',
+      icon:  () => SETTINGS.playing ? '⏸' : '▶',
+      title: () => SETTINGS.playing ? 'Pause (Space)' : 'Play (Space)',
+      active: () => SETTINGS.playing,
+      key: ' ',
+      onClick() { SETTINGS.playing = !SETTINGS.playing; saveSettings(); },
+    }],
+
     styles: {
       classic:    { label:'Classic',    speed:3,  cellSize:20, cellShape:'square', trail:3,  brush:'single' },
       microscope: { label:'Microscope', speed:5,  cellSize:8,  cellShape:'circle', trail:2,  brush:'single' },
@@ -981,29 +1027,7 @@ const Anim = (() => {
       const cs = SETTINGS.cellSize | 0;
       allocGrid(Math.floor(W / cs), Math.floor(H / cs));
       this.reset();
-
-      // Floating Play/Pause button — always visible, bottom-right
-      playBtn = document.createElement('button');
-      playBtn.className = 'btn';
-      playBtn.style.cssText = 'position:fixed;bottom:18px;right:18px;z-index:15;font-size:20px;padding:10px 18px;';
-      updatePlayBtn();
-      playBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        getAudio();
-        SETTINGS.playing = !SETTINGS.playing;
-        saveSettings();
-        updatePlayBtn();
-      });
-      document.body.appendChild(playBtn);
-
-      window.addEventListener('keydown', e => {
-        if (e.code === 'Space' && e.target === document.body) {
-          e.preventDefault();
-          SETTINGS.playing = !SETTINGS.playing;
-          saveSettings();
-          updatePlayBtn();
-        }
-      });
+      // Play/Pause is a framework rail button — see `railButtons` below.
     },
 
     resize(w, h) {
@@ -1073,7 +1097,7 @@ const Anim = (() => {
       if (visColors) visColors.fill(0);
       genAccum = 0;
       SETTINGS.playing = false;
-      updatePlayBtn();
+      refreshRailButtons();
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = `rgb(${bgRGB[0]*255|0},${bgRGB[1]*255|0},${bgRGB[2]*255|0})`;
       ctx.fillRect(0, 0, W, H);
